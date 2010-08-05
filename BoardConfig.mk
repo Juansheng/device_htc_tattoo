@@ -35,7 +35,7 @@ BOARD_EGL_CFG := device/htc/tattoo/egl.cfg
 # AOSP su replaced with Zinx Superuser package
 BUILD_OLD_SU := false
 
-# Busybox
+# Busybox, DO NOT link to anything
 KERNEL_MODULES_DIR := /system/lib/modules
 BUILD_BUSYBOX_EXTRA := false
 
