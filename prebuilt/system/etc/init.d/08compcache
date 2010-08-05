@@ -1,0 +1,9 @@
+#!/system/bin/sh
+
+# - load compcache module
+insmod /system/lib/modules/xvmalloc.ko
+insmod /system/lib/modules/ramzswap.ko disksize_kb=30720
+busybox swapon /dev/block/ramzswap0
+
+exit 0
+
