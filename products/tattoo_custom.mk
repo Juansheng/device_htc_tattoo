@@ -115,8 +115,6 @@ PRODUCT_COPY_FILES += \
 # gtalkserivce and maps
 PRODUCT_COPY_FILES += \
     device/htc/tattoo/prebuilt/system/etc/permissions/android.hardware.location.gps.xml:system/etc/permissions/android.hardware.location.gps.xml \
-    device/htc/tattoo/prebuilt/system/etc/permissions/android.hardware.sensor.light.xml:system/etc/permissions/android.hardware.sensor.light.xml \
-    device/htc/tattoo/prebuilt/system/etc/permissions/android.hardware.sensor.proximity.xml:system/etc/permissions/android.hardware.sensor.proximity.xml \
     device/htc/tattoo/prebuilt/system/etc/permissions/android.hardware.telephony.gsm.xml:system/etc/permissions/android.hardware.telephony.gsm.xml \
     device/htc/tattoo/prebuilt/system/etc/permissions/android.hardware.touchscreen.xml:system/etc/permissions/android.hardware.touchscreen.xml \
     device/htc/tattoo/prebuilt/system/etc/permissions/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
@@ -124,7 +122,6 @@ PRODUCT_COPY_FILES += \
     device/htc/tattoo/prebuilt/system/etc/permissions/com.google.android.datamessaging.xml:system/etc/permissions/com.google.android.datamessaging.xml \
     device/htc/tattoo/prebuilt/system/etc/permissions/com.google.android.gtalkservice.xml:system/etc/permissions/com.google.android.gtalkservice.xml \
     device/htc/tattoo/prebuilt/system/etc/permissions/com.google.android.maps.xml:system/etc/permissions/com.google.android.maps.xml \
-    device/htc/tattoo/prebuilt/system/etc/permissions/required_hardware.xml:system/etc/permissions/required_hardware.xml \
     device/htc/tattoo/prebuilt/system/framework/com.google.android.gtalkservice.jar:system/framework/com.google.android.gtalkservice.jar \
     device/htc/tattoo/prebuilt/system/framework/com.google.android.maps.jar:system/framework/com.google.android.maps.jar
 
@@ -194,4 +191,26 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/lib/libOmxVidEnc.so:system/lib/libOmxVidEnc.so \
 	device/htc/tattoo/prebuilt/system/lib/libspeech.so:system/lib/libspeech.so \
 	device/htc/tattoo/prebuilt/system/lib/libt9.so:system/lib/libt9.so
+
+# Google apps
+PRODUCT_COPY_FILES += \
+	device/htc/tattoo/prebuilt/system/app/GenieWidget.apk:system/app/GenieWidget.apk \
+	device/htc/tattoo/prebuilt/system/app/Gmail.apk:system/app/Gmail.apk \
+	device/htc/tattoo/prebuilt/system/app/GoogleBackupTransport.apk:system/app/GoogleBackupTransport.apk \
+	device/htc/tattoo/prebuilt/system/app/GoogleCalendarSyncAdapter.apk:system/app/GoogleCalendarSyncAdapter.apk \
+	device/htc/tattoo/prebuilt/system/app/GoogleContactsSyncAdapter.apk:system/app/GoogleContactsSyncAdapter.apk \
+	device/htc/tattoo/prebuilt/system/app/GoogleFeedback.apk:system/app/GoogleFeedback.apk \
+	device/htc/tattoo/prebuilt/system/app/GooglePartnerSetup.apk:system/app/GooglePartnerSetup.apk \
+	device/htc/tattoo/prebuilt/system/app/GoogleQuickSearchBox.apk:system/app/GoogleQuickSearchBox.apk \
+	device/htc/tattoo/prebuilt/system/app/GoogleServicesFramework.apk:system/app/GoogleServicesFramework.apk \
+	device/htc/tattoo/prebuilt/system/app/Maps.apk:system/app/Maps.apk \
+	device/htc/tattoo/prebuilt/system/app/MarketUpdater.apk:system/app/MarketUpdater.apk \
+	device/htc/tattoo/prebuilt/system/app/MediaUploader.apk:system/app/MediaUploader.apk \
+	device/htc/tattoo/prebuilt/system/app/NetworkLocation.apk:system/app/NetworkLocation.apk \
+	device/htc/tattoo/prebuilt/system/app/OneTimeInitializer.apk:system/app/OneTimeInitializer.apk \
+	device/htc/tattoo/prebuilt/system/app/Street.apk:system/app/Street.apk \
+	device/htc/tattoo/prebuilt/system/app/Talk.apk:system/app/Talk.apk \
+	device/htc/tattoo/prebuilt/system/app/Vending.apk:system/app/Vending.apk \
+	device/htc/tattoo/prebuilt/system/app/VoiceSearch.apk:system/app/VoiceSearch.apk \
+	device/htc/tattoo/prebuilt/system/app/YouTube.apk:system/app/YouTube.apk
 
