@@ -46,6 +46,9 @@ settings.display.brightness=102
 # Enable JIT by default
 dalvik.vm.execution-mode=int:jit
 
+# The OpenGL ES API level, 1.0 here
+ro.opengles.version=65536
+
 # Active stagefright
 media.stagefright.enable-player=true
 media.stagefright.enable-meta=true
