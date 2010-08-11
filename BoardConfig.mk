@@ -24,7 +24,7 @@ BOARD_KERNEL_BASE := 0x02E00000
 
 BOARD_HAVE_BLUETOOTH := true
 
-BOARD_VENDOR_QCOM_AMSS_VERSION := 1335
+BOARD_VENDOR_QCOM_AMSS_VERSION := 1355
 
 TARGET_HARDWARE_3D := false
 
@@ -38,9 +38,6 @@ BUILD_OLD_SU := false
 # Busybox, DO NOT link to anything
 KERNEL_MODULES_DIR := /system/lib/modules
 BUILD_BUSYBOX_EXTRA := false
-
-# Don't link to toolbox
-BUILD_TOOLBOX_LINKS := false
 
 # JIT built in, but disabled by default
 WITH_JIT := true
