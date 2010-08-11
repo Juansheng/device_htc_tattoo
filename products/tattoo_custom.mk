@@ -53,18 +53,15 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     Development \
     GlobalSearch \
-	LiveWallpapersPicker \
-	CubeLiveWallpapers \
 	SdkSetup \
     SoundRecorder \
     VoiceDialer \
 	SpareParts \
     GoogleContactsProvider
 
-# LiveWallpaper
+# LiveWallpaper and sensors lib
 PRODUCT_PACKAGES += \
-    libRS \
-    librs_jni \
+	LiveWallpapersPicker \
 	sensors.bahamas
 
 # Tattoo uses medium-density artwork where available
@@ -95,7 +92,7 @@ PRODUCT_LOCALES := mdpi \
 PRODUCT_COPY_FILES := \
 	system/core/rootdir/etc/vold.fstab:system/etc/vold.fstab \
 	frameworks/base/data/sounds/effects/camera_click.ogg:system/media/audio/ui/camera_click.ogg \
-	frameworks/base/data/sounds/effects/VideoRecord.ogg:system/media/audio/ui/VideoRecord.ogg
+	frameworks/base/data/sounds/effects/VideoRecord.ogg:system/media/audio/ui/VideoRecord.ogg \
 
 # libgps is necessary to complete the compilation
 PRODUCT_COPY_FILES += \
@@ -112,14 +109,16 @@ PRODUCT_COPY_FILES += \
 #include external/svox/pico/lang/PicoLangFrFrInSystem.mk
 #include external/svox/pico/lang/PicoLangItItInSystem.mk
 
-# gtalkserivce and maps
+# Permissions and other stuff
 PRODUCT_COPY_FILES += \
-    device/htc/tattoo/prebuilt/system/etc/permissions/android.hardware.location.gps.xml:system/etc/permissions/android.hardware.location.gps.xml \
-    device/htc/tattoo/prebuilt/system/etc/permissions/android.hardware.telephony.gsm.xml:system/etc/permissions/android.hardware.telephony.gsm.xml \
-    device/htc/tattoo/prebuilt/system/etc/permissions/android.hardware.touchscreen.xml:system/etc/permissions/android.hardware.touchscreen.xml \
-    device/htc/tattoo/prebuilt/system/etc/permissions/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
-    device/htc/tattoo/prebuilt/system/etc/permissions/android.software.live_wallpaper.xml:system/etc/permissions/android.software.live_wallpaper.xml \
-    device/htc/tattoo/prebuilt/system/etc/permissions/com.google.android.datamessaging.xml:system/etc/permissions/com.google.android.datamessaging.xml \
+    frameworks/base/data/etc/handheld_core_hardware.xml:system/etc/permissions/handheld_core_hardware.xml \
+    frameworks/base/data/etc/android.hardware.camera.autofocus.xml:system/etc/permissions/android.hardware.camera.autofocus.xml \
+    frameworks/base/data/etc/android.hardware.telephony.gsm.xml:system/etc/permissions/android.hardware.telephony.gsm.xml \
+    frameworks/base/data/etc/android.hardware.location.gps.xml:system/etc/permissions/android.hardware.location.gps.xml \
+    frameworks/base/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
+    frameworks/base/data/etc/android.hardware.touchscreen.xml:system/etc/permissions/android.hardware.touchscreen.xml \
+    frameworks/base/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
+	packages/wallpapers/LivePicker/android.software.live_wallpaper.xml:system/etc/permissions/android.software.live_wallpaper.xml \
     device/htc/tattoo/prebuilt/system/etc/permissions/com.google.android.gtalkservice.xml:system/etc/permissions/com.google.android.gtalkservice.xml \
     device/htc/tattoo/prebuilt/system/etc/permissions/com.google.android.maps.xml:system/etc/permissions/com.google.android.maps.xml \
     device/htc/tattoo/prebuilt/system/framework/com.google.android.gtalkservice.jar:system/framework/com.google.android.gtalkservice.jar \
@@ -148,7 +147,6 @@ PRODUCT_COPY_FILES += \
     device/htc/tattoo/prebuilt/system/etc/terminfo/u/unknown:system/etc/terminfo/u/unknown \
     device/htc/tattoo/prebuilt/system/etc/wifi/Fw1251r1c.bin:system/etc/wifi/Fw1251r1c.bin \
     device/htc/tattoo/prebuilt/system/etc/wifi/tiwlan.ini:system/etc/wifi/tiwlan.ini
-
 
 # Prebuilt for /system/sbin
 PRODUCT_COPY_FILES += \
