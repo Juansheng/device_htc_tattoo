@@ -1,6 +1,42 @@
 
 -*- fyodor-aosp-tattoo ROM Changelog -*-
 
+v0.7.2c Changelog:
+[LIST]
+[*]new kernel with camera debug enabled for devs. (hope it helps to fix the camera issue)
+[*]sapphire camera interfaces ported into this new kernel. (mt9t013 driver with AF disabled)
+[*]delete google apps. (any mdpi-gapps packages for Froyo would work. see FAQ)
+[*]compile the Phone app hacked by cytown, replace the stock one with it.
+[*]make VoiceRecorder visible to user.
+[*]fix the LatinIME can't predict, six lang included.
+[*]tweaks on framework and Launcher2 to improve user experience.
+[*]tweaks to save more battery. (2-3 days without gapps)
+[*]disable JIT by default since a bit unstable on arm5vt-compatible devices.
+[/LIST]
+
+v0.7.2b Patch Changelog:
+[LIST]
+[*]fix the Network Location issue.
+[*]revert 'keep home app in memory'. (which will lag down our system)
+[*]try to fix the Market issue, using FRF91 stock Market app.
+[*]fix the layout for USB storage switching button.
+[*]HTC_IME added, please check the attachments.
+[/LIST]
+
+v0.7.2a Changelog:
+[LIST]
+[*]new kernel with porting donut interface for camera.
+[*]kernel patched with BFS-316.
+[*]fix copybit 'invalid arguments' and 'timed out' issues.
+[*]bionic libraries from cyanogenmod git repo.
+[*]MMS and Market fixed up. (after installation, Market sometimes crashes)
+[*]Gmail resolution changed.
+[*]fully enable stagefright to play or record media.
+[*]move dalvik-cache to /cache partition.
+[*]optimize launcher2 and keep it in memory.
+[*]other little changes I forgot, sorry.
+[/LIST]
+
 v0.7.1 Changelog:
 [LIST]
 [*]JIT enabled. (best mflops is 3.8 on my device, a bit longer first boot time)
