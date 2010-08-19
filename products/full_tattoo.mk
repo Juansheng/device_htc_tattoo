@@ -30,8 +30,6 @@ BUILD_DISPLAY_ID := FRF91
 BUILD_FINGERPRINT := google/passion/passion/mahimahi:2.2/FRF91/43546:user/release-keys
 PRIVATE_BUILD_DESC := "tattoo-user 2.2 FRF91 43546 release-keys"
 
-TARGET_PRELINKER_MAP := $(TOP)/device/htc/tattoo/prelink-linux-arm.map
-
 PRODUCT_PACKAGE_OVERLAYS := device/htc/tattoo/overlay
 
 PRODUCT_PACKAGES += Stk
