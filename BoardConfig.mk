@@ -35,7 +35,7 @@ BOARD_EGL_CFG := device/htc/tattoo/egl.cfg
 # AOSP su replaced with Zinx Superuser package
 BUILD_OLD_SU := false
 
-# Busybox, DO NOT link to anything
+# Busybox
 KERNEL_MODULES_DIR := /system/lib/modules
 BUILD_BUSYBOX_EXTRA := false
 
@@ -54,6 +54,9 @@ BOARD_NO_PV_AUTHORING_CLOCK := true
 
 # Use QCOM libOmxCore.so
 BOARD_USES_QCOM_LIBS := true
+
+# Use Eclair Camera Hack
+BOARD_USES_OLD_CAMERA_HACK := true
 
 # Changed for Tattoo
 BOARD_BOOTIMAGE_MAX_SIZE := $(call image-size-from-data-size,0x00280000)
