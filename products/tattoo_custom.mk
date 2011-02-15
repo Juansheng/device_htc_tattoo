@@ -102,7 +102,6 @@ PRODUCT_COPY_FILES += \
     device/htc/tattoo/prebuilt/system/etc/media_profiles.xml:system/etc/media_profiles.xml
 
 # Include available languages for TTS in the system image
-# Once they are compiled out...
 #include external/svox/pico/lang/PicoLangDeDeInSystem.mk
 #include external/svox/pico/lang/PicoLangEnGBInSystem.mk
 #include external/svox/pico/lang/PicoLangEnUsInSystem.mk
@@ -120,10 +119,6 @@ PRODUCT_COPY_FILES += \
     frameworks/base/data/etc/android.hardware.touchscreen.xml:system/etc/permissions/android.hardware.touchscreen.xml \
     frameworks/base/data/etc/android.hardware.wifi.xml:system/etc/permissions/android.hardware.wifi.xml \
     packages/wallpapers/LivePicker/android.software.live_wallpaper.xml:system/etc/permissions/android.software.live_wallpaper.xml
-
-# Prebuilt for /system/squashfs
-PRODUCT_COPY_FILES += \
-	device/htc/tattoo/prebuilt/system/squashfs/modules.sqf:system/squashfs/modules.sqf
 
 # Files in /system/etc
 PRODUCT_COPY_FILES += \
@@ -145,12 +140,6 @@ PRODUCT_COPY_FILES += \
     device/htc/tattoo/prebuilt/system/etc/wifi/Fw1251r1c.bin:system/etc/wifi/Fw1251r1c.bin \
     device/htc/tattoo/prebuilt/system/etc/wifi/tiwlan.ini:system/etc/wifi/tiwlan.ini
 
-# Prebuilt for /system/sbin
-PRODUCT_COPY_FILES += \
-	device/htc/tattoo/prebuilt/system/xbin/dropbear:system/xbin/dropbear \
-	device/htc/tattoo/prebuilt/system/xbin/dropbearkey:system/xbin/dropbearkey \
-	device/htc/tattoo/prebuilt/system/xbin/rzscontrol:system/xbin/rzscontrol
-
 # Prebuilt for /system/usr/keychars and /system/usr/keylayout
 PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/usr/keychars/qwerty2.kcm.bin:system/usr/keychars/qwerty2.kcm.bin \
@@ -158,15 +147,13 @@ PRODUCT_COPY_FILES += \
 
 # boot partition
 PRODUCT_COPY_FILES += \
-	device/htc/tattoo/prebuilt/boot/sbin/tattoo-hack.ko:root/sbin/tattoo-hack.ko \
 	device/htc/tattoo/prebuilt/boot/init.rc:root/init.rc
 
 # Other bin stuff
 PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/META-INF/com/google/android/update-script:META-INF/com/google/android/update-script \
 	device/htc/tattoo/prebuilt/system/bin/akm8973:system/bin/akm8973 \
-	device/htc/tattoo/prebuilt/system/lib/modules/placeholder:system/lib/modules/placeholder \
-	device/htc/tattoo/prebuilt/system/sbin/placeholder:system/sbin/placeholder
+	device/htc/tattoo/prebuilt/system/lib/modules/placeholder:system/lib/modules/placeholder
 
 PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/media/audio/notifications/Teleport.mp3:system/media/audio/notifications/Teleport.mp3 \
