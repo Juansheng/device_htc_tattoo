@@ -8,8 +8,7 @@ ROMNAME="Froyo-AOSP.zip"
 [ ! -d $PRODUCT ] && echo "$PRODUCT not found!" && exit 1
 
 cd $PRODUCT
-# NOTE: ash MUST be linked to /system/bin/sh @ updater-script
-#find system -type l -exec rm -rf {} \; &> /dev/null
+find system/xbin -type l -exec rm -rf {} \; &> /dev/null
 
 echo "generate ROM..."
 rm -f $ROMNAME &> /dev/null

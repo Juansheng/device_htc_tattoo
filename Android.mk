@@ -17,7 +17,6 @@ subdir_makefiles := \
 	$(LOCAL_PATH)/extras/libcamera2/Android.mk \
 	$(LOCAL_PATH)/extras/qcom_mm-core/Android.mk \
 	$(LOCAL_PATH)/extras/Superuser/Android.mk \
-	$(LOCAL_PATH)/extras/busybox/Android.mk \
 	$(LOCAL_PATH)/extras/su/Android.mk
 
 include $(subdir_makefiles)
