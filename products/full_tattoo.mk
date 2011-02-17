@@ -14,21 +14,21 @@
 # limitations under the License.
 #
 
+# Full language support
+$(call inherit-product, $(SRC_TARGET_DIR)/product/languages_full.mk)
+
 # This is the top-level configuration for a Tattoo build
 $(call inherit-product, device/htc/tattoo/products/tattoo_custom.mk)
 
 # Overwrite PRODUCT_* strings
 PRODUCT_NAME := full_tattoo
-PRODUCT_BRAND := google
 PRODUCT_DEVICE := tattoo
+PRODUCT_BRAND := Google
 PRODUCT_MODEL := Tattoo
 PRODUCT_MANUFACTURER := HTC
 
 PLATFORM_VERSION := 2.2
-BUILD_ID := FRF91
-BUILD_DISPLAY_ID := FRF91
-BUILD_FINGERPRINT := google/passion/passion/mahimahi:2.2/FRF91/43546:user/release-keys
-PRIVATE_BUILD_DESC := "tattoo-user 2.2 FRF91 43546 release-keys"
+BUILD_ID := froyo-plus-aosp
 
 PRODUCT_PACKAGE_OVERLAYS := device/htc/tattoo/overlay
 

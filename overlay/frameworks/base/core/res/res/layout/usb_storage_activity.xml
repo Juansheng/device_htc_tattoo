@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
-    android:padding="12dip"
+    android:padding="8dip"
     >
 
     <ImageView android:id="@+id/icon"
@@ -38,7 +38,7 @@
         android:layout_height="wrap_content"
         android:layout_centerHorizontal="true"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="2dip"
+        android:layout_marginBottom="6dip"
         >
 
         <Button android:id="@+id/mount_button" 

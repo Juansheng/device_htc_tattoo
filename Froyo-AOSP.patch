@@ -1,0 +1,436 @@
+
+project bionic/
+diff --git a/libc/bionic/__set_errno.c b/libc/bionic/__set_errno.c
+index 163d404..5cf1637 100644
+--- a/libc/bionic/__set_errno.c
++++ b/libc/bionic/__set_errno.c
+@@ -40,7 +40,7 @@ int __set_errno(int n)
+  * (tail-called in the case of 0-4 arg versions)
+  */
+ 
+-__LIBC_HIDDEN__
++//__LIBC_HIDDEN__
+ int __set_syscall_errno(int n)
+ {
+         /* some syscalls, mmap() for example, have valid return
+diff --git a/libc/netbsd/resolv/res_state.c b/libc/netbsd/resolv/res_state.c
+index 3209b6f..ffbfcb0 100644
+--- a/libc/netbsd/resolv/res_state.c
++++ b/libc/netbsd/resolv/res_state.c
+@@ -134,7 +134,7 @@ _res_thread_get(void)
+     return rt;
+ }
+ 
+-__LIBC_HIDDEN__
++//__LIBC_HIDDEN__
+ struct __res_state _nres;
+ 
+ #if 0
+diff --git a/libc/stdio/mktemp.c b/libc/stdio/mktemp.c
+index aaa5640..93120cb 100644
+--- a/libc/stdio/mktemp.c
++++ b/libc/stdio/mktemp.c
+@@ -65,7 +65,8 @@ mkdtemp(char *path)
+ 
+ char *_mktemp(char *);
+ 
+-__LIBC_HIDDEN__ char *
++//__LIBC_HIDDEN__ char *
++char *
+ _mktemp(char *path)
+ {
+ 	return(_gettemp(path, (int *)NULL, 0, 0) ? path : (char *)NULL);
+
+project build/
+diff --git a/core/main.mk b/core/main.mk
+index 4c772bb..0563308 100644
+--- a/core/main.mk
++++ b/core/main.mk
+@@ -68,7 +68,7 @@ $(info Checking build tools versions...)
+ 
+ ifeq ($(BUILD_OS),linux)
+ build_arch := $(shell uname -m)
+-ifneq (64,$(findstring 64,$(build_arch)))
++ifneq (i686,$(findstring i686,$(build_arch)))
+ $(warning ************************************************************)
+ $(warning You are attempting to build on a 32-bit system.)
+ $(warning Only 64-bit build environments are supported beyond froyo/2.2.)
+diff --git a/core/prelink-linux-arm.map b/core/prelink-linux-arm.map
+index 22f5f34..1e779b2 100644
+--- a/core/prelink-linux-arm.map
++++ b/core/prelink-linux-arm.map
+@@ -90,10 +90,9 @@ libFLAC.so              0xA9B00000 # [???]
+ libaudiopolicy.so       0xA9A00000 # [~1M]
+ libaudiopolicygeneric.so 0xA9900000 # [???]
+ libsoundpool.so         0xA9800000 # [~1M]
+-libaudio.so             0xA9700000 # [~1M]
+-libspeech.so            0xA9600000 # [~1M]
+-libsonivox.so           0xA9500000 # [~1M]
+-libvorbisidec.so        0xA9400000 # [~1M]
++libgps.so               0xA9700000 # [~1M] (moved for Tattoo)
++libcamera.so            0xA9680000 # [~1M] (moved for Tattoo)
++liboemcamera.so         0xA9400000 # [~2M] (moved for Tattoo)
+ libmedia_jni.so         0xA9300000 # [~1M]
+ libmediaplayerservice.so 0xA9200000 # [~1M]
+ libmedia.so             0xA9000000 # [~2M]
+@@ -113,9 +112,10 @@ libhardware_legacy.so   0xA7E00000 # [~1M]
+ libapp_process.so       0xA7D00000 # [???]
+ libsystem_server.so     0xA7C00000 # [~1M]
+ libime.so               0xA7B00000 # [???]
+-libgps.so               0xA7A00000 # [~1M]
+-libcamera.so            0xA7900000 # [~1M]
+-liboemcamera.so         0xA7700000 # [~2M]
++libaudio.so             0xA7A00000 # [~1M] (moved for Tattoo)
++libspeech.so            0xA7900000 # [~1M] 
++libsonivox.so           0xA7800000 # [~1M] (moved for Tattoo)
++libvorbisidec.so        0xA7700000 # [~1M] (moved for Tattoo)
+ libdiskconfig.so        0xA7600000 # [<64K]
+ libemoji.so             0xA7500000 # [<64K]
+ libjni_latinime.so      0xA7400000 # [~1M]
+@@ -170,7 +170,7 @@ libstagefright.so                  0xA2F00000 # [~4M]
+ # libraries for specific hardware
+ libgsl.so               0xA2E00000 # [~1M]
+ libhtc_acoustic.so      0xA2D00000 # [<64K]
+-libhtc_ril.so           0xA2C00000 # [~1M]
++#libhtc_ril.so           0xA2C00000 # [~1M]
+ liblvmxipc.so           0xA2B00000 # [~1M] for vendor/nxp
+ libreference-cdma-sms.so 0xA2A00000 # [<64K] for hardware/ril
+ 
+@@ -205,3 +205,4 @@ libstlport.so           0x9D100000 # [~3M] for external/stlport
+ libzxing.so             0x9D000000 # [<64K] for goggles
+ libinterstitial.so      0x9CF00000 # [<64K] for goggles
+ liblept.so              0x9CA00000 # [~5M] for external/leptonica
++
+
+project external/clearsilver/
+diff --git a/cgi/Android.mk b/cgi/Android.mk
+index 21c534b..acf08b2 100644
+--- a/cgi/Android.mk
++++ b/cgi/Android.mk
+@@ -13,8 +13,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/..
+ LOCAL_CFLAGS := -fPIC
+ 
+ # This forces a 64-bit build for Java6
+-LOCAL_CFLAGS += -m64
+-LOCAL_LDFLAGS += -m64
++#LOCAL_CFLAGS += -m64
++#LOCAL_LDFLAGS += -m64
+ 
+ LOCAL_NO_DEFAULT_COMPILER_FLAGS := true
+ 
+diff --git a/cs/Android.mk b/cs/Android.mk
+index 9f0e30a..c36a1e1 100644
+--- a/cs/Android.mk
++++ b/cs/Android.mk
+@@ -9,8 +9,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/..
+ LOCAL_CFLAGS := -fPIC
+ 
+ # This forces a 64-bit build for Java6
+-LOCAL_CFLAGS += -m64
+-LOCAL_LDFLAGS += -m64
++#LOCAL_CFLAGS += -m64
++#LOCAL_LDFLAGS += -m64
+ 
+ LOCAL_NO_DEFAULT_COMPILER_FLAGS := true
+ 
+diff --git a/java-jni/Android.mk b/java-jni/Android.mk
+index 21b4fd1..51d4c25 100644
+--- a/java-jni/Android.mk
++++ b/java-jni/Android.mk
+@@ -34,8 +34,8 @@ LOCAL_C_INCLUDES := \
+ LOCAL_CFLAGS += -fPIC
+ 
+ # This forces a 64-bit build for Java6
+-LOCAL_CFLAGS += -m64
+-LOCAL_LDFLAGS += -m64
++#LOCAL_CFLAGS += -m64
++#LOCAL_LDFLAGS += -m64
+ 
+ LOCAL_NO_DEFAULT_COMPILER_FLAGS := true
+ 
+diff --git a/util/Android.mk b/util/Android.mk
+index 386f379..f15281b 100644
+--- a/util/Android.mk
++++ b/util/Android.mk
+@@ -18,8 +18,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/..
+ LOCAL_CFLAGS := -fPIC
+ 
+ # This forces a 64-bit build for Java6
+-LOCAL_CFLAGS += -m64
+-LOCAL_LDFLAGS += -m64
++#LOCAL_CFLAGS += -m64
++#LOCAL_LDFLAGS += -m64
+ 
+ LOCAL_NO_DEFAULT_COMPILER_FLAGS := true
+ 
+
+project frameworks/base/
+diff --git a/services/surfaceflinger/Android.mk b/services/surfaceflinger/Android.mk
+index 86eb78d..99f5bd7 100644
+--- a/services/surfaceflinger/Android.mk
++++ b/services/surfaceflinger/Android.mk
+@@ -16,6 +16,10 @@ LOCAL_SRC_FILES:= \
+     Tokenizer.cpp \
+     Transform.cpp
+ 
++ifeq ($(BOARD_NO_RGBX_8888), true)
++       LOCAL_CFLAGS += -DNO_RGBX_8888
++endif
++
+ LOCAL_CFLAGS:= -DLOG_TAG=\"SurfaceFlinger\"
+ LOCAL_CFLAGS += -DGL_GLEXT_PROTOTYPES -DEGL_EGLEXT_PROTOTYPES
+ 
+
+project hardware/msm7k/
+diff --git a/libaudio/Android.mk b/libaudio/Android.mk
+index 5f28582..6b8c9cc 100644
+--- a/libaudio/Android.mk
++++ b/libaudio/Android.mk
+@@ -26,6 +26,8 @@ include $(BUILD_SHARED_LIBRARY)
+ 
+ include $(CLEAR_VARS)
+ 
++LOCAL_PRELINK_MODULE := false
++
+ LOCAL_MODULE := libaudio
+ 
+ LOCAL_SHARED_LIBRARIES := \
+
+project packages/apps/Camera/
+diff --git a/src/com/android/camera/ui/GLRootView.java b/src/com/android/camera/ui/GLRootView.java
+index 8aeae04..663f263 100644
+--- a/src/com/android/camera/ui/GLRootView.java
++++ b/src/com/android/camera/ui/GLRootView.java
+@@ -17,6 +17,7 @@
+ package com.android.camera.ui;
+ 
+ import com.android.camera.Util;
++import com.android.camera.R;
+ 
+ import android.app.Activity;
+ import android.content.Context;
+@@ -171,7 +172,11 @@ public class GLRootView extends GLSurfaceView
+ 
+     private void initialize() {
+         mFlags |= FLAG_INITIALIZED;
+-        setEGLConfigChooser(8, 8, 8, 8, 0, 4);
++        if (getResources().getBoolean(R.bool.softwareGLOnly)) {
++            setEGLConfigChooser(8, 8, 8, 8, 0, 0);
++        } else {
++            setEGLConfigChooser(8, 8, 8, 8, 0, 4);
++        }
+         getHolder().setFormat(PixelFormat.TRANSLUCENT);
+         setZOrderOnTop(true);
+ 
+@@ -438,7 +443,11 @@ public class GLRootView extends GLSurfaceView
+         clearClip();
+         gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_STENCIL_BUFFER_BIT);
+         gl.glEnable(GL11.GL_BLEND);
+-        gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
++        if (getResources().getBoolean(R.bool.softwareGLOnly)) {
++            gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE);
++        } else {
++            gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
++        }
+ 
+         mAnimationTime = SystemClock.uptimeMillis();
+         if (mContentView != null) {
+diff --git a/src/com/android/camera/ui/PopupWindow.java b/src/com/android/camera/ui/PopupWindow.java
+index 8219079..4e2fd10 100644
+--- a/src/com/android/camera/ui/PopupWindow.java
++++ b/src/com/android/camera/ui/PopupWindow.java
+@@ -16,6 +16,8 @@
+ 
+ package com.android.camera.ui;
+ 
++import com.android.camera.R;
++
+ import android.graphics.Rect;
+ import android.view.View.MeasureSpec;
+ import android.view.animation.AlphaAnimation;
+@@ -139,7 +141,11 @@ public class PopupWindow extends GLView {
+ 
+         gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ZERO);
+         backup.draw(root, aXoffset, aYoffset, aWidth, aHeight, 1);
+-        gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
++        if (getGLRootView().getContext().getResources().getBoolean(R.bool.softwareGLOnly)) {
++            gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE);
++        } else {
++            gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
++        }
+     }
+ 
+     public void setContent(GLView content) {
+
+project packages/apps/Launcher2/
+diff --git a/src/com/android/launcher2/Workspace.java b/src/com/android/launcher2/Workspace.java
+index cba1a3b..6d7a8ab 100644
+--- a/src/com/android/launcher2/Workspace.java
++++ b/src/com/android/launcher2/Workspace.java
+@@ -62,7 +62,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+     /**
+      * The velocity at which a fling gesture will cause us to snap to the next screen
+      */
+-    private static final int SNAP_VELOCITY = 600;
++    private static final int SNAP_VELOCITY = 200;
+ 
+     private final WallpaperManager mWallpaperManager;
+     
+@@ -131,7 +131,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+     private static final float FLING_VELOCITY_INFLUENCE = 0.4f;
+     
+     private static class WorkspaceOvershootInterpolator implements Interpolator {
+-        private static final float DEFAULT_TENSION = 1.3f;
++        private static final float DEFAULT_TENSION = 0.3f;
+         private float mTension;
+ 
+         public WorkspaceOvershootInterpolator() {
+@@ -909,7 +909,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+             if (mTouchState == TOUCH_STATE_SCROLLING) {
+                 final VelocityTracker velocityTracker = mVelocityTracker;
+                 velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
+-                final int velocityX = (int) velocityTracker.getXVelocity(mActivePointerId);
++                final int velocityX = 20 * (int) velocityTracker.getXVelocity(mActivePointerId);
+                 
+                 final int screenWidth = getWidth();
+                 final int whichScreen = (mScrollX + (screenWidth / 2)) / screenWidth;
+@@ -920,13 +920,13 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+                     // Don't fling across more than one screen at a time.
+                     final int bound = scrolledPos < whichScreen ?
+                             mCurrentScreen - 1 : mCurrentScreen;
+-                    snapToScreen(Math.min(whichScreen, bound), velocityX, true);
++                    snapToScreen(Math.min(whichScreen, bound), velocityX, false);
+                 } else if (velocityX < -SNAP_VELOCITY && mCurrentScreen < getChildCount() - 1) {
+                     // Fling hard enough to move right
+                     // Don't fling across more than one screen at a time.
+                     final int bound = scrolledPos > whichScreen ?
+                             mCurrentScreen + 1 : mCurrentScreen;
+-                    snapToScreen(Math.max(whichScreen, bound), velocityX, true);
++                    snapToScreen(Math.max(whichScreen, bound), velocityX, false);
+                 } else {
+                     snapToScreen(whichScreen, 0, true);
+                 }
+@@ -977,7 +977,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+         final int screenDelta = Math.max(1, Math.abs(whichScreen - mCurrentScreen));
+         final int newX = whichScreen * getWidth();
+         final int delta = newX - mScrollX;
+-        int duration = (screenDelta + 1) * 100;
++        int duration = (screenDelta + 1) * 20;
+ 
+         if (!mScroller.isFinished()) {
+             mScroller.abortAnimation();
+@@ -994,7 +994,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+             duration += (duration / (velocity / BASELINE_FLING_VELOCITY))
+                     * FLING_VELOCITY_INFLUENCE;
+         } else {
+-            duration += 100;
++            duration += 20;
+         }
+ 
+         awakenScrollBars(duration);
+
+project packages/apps/SoundRecorder/
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index a70ee0e..8dd32d1 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -29,6 +29,7 @@
+                 android:configChanges="orientation|keyboardHidden">
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN" />
++                <category android:name="android.intent.category.LAUNCHER"/>
+             </intent-filter>
+             <intent-filter>
+                  <action android:name="android.intent.action.GET_CONTENT" />
+
+project packages/apps/SpeechRecorder/
+diff --git a/Android.mk b/Android.mk
+index 07beaef..67f440f 100644
+--- a/Android.mk
++++ b/Android.mk
+@@ -1,7 +1,7 @@
+ LOCAL_PATH:= $(call my-dir)
+ include $(CLEAR_VARS)
+ 
+-LOCAL_MODULE_TAGS := eng
++LOCAL_MODULE_TAGS := optional
+ 
+ LOCAL_SRC_FILES := $(call all-subdir-java-files) \
+ 
+
+project system/core/
+diff --git a/init/builtins.c b/init/builtins.c
+index 44faf17..6e6e933 100644
+--- a/init/builtins.c
++++ b/init/builtins.c
+@@ -29,6 +29,7 @@
+ #include <stdlib.h>
+ #include <sys/mount.h>
+ #include <sys/resource.h>
++#include <sys/wait.h>
+ #include <linux/loop.h>
+ 
+ #include "init.h"
+@@ -164,9 +165,43 @@ int do_domainname(int nargs, char **args)
+     return write_file("/proc/sys/kernel/domainname", args[1]);
+ }
+ 
++/* exec <path> <arg1> <arg2> ... */
++#define MAX_PARAMETERS 64
+ int do_exec(int nargs, char **args)
+ {
+-    return -1;
++    pid_t pid;
++    int status, i, j;
++    char *par[MAX_PARAMETERS];
++
++    if (nargs > MAX_PARAMETERS)
++    {
++        return -1;
++    }
++    for(i=0, j=1; i<(nargs-1) ;i++,j++)
++    {
++        par[i] = args[j];
++    }
++    par[i] = (char*)0;
++    pid = fork();
++    if (!pid)
++    {
++        char tmp[32];
++        int fd, sz;
++        get_property_workspace(&fd, &sz);
++        sprintf(tmp, "%d,%d", dup(fd), sz);
++        setenv("ANDROID_PROPERTY_WORKSPACE", tmp, 1);
++        execve(par[0],par,environ);
++        exit(0);
++    }
++    else
++    {
++        waitpid(pid, &status, 0);
++        if (WEXITSTATUS(status) != 0) {
++            ERROR("exec: pid %1d exited with return code %d: %s", (int)pid, WEXITSTATUS(status), strerror(status));
++        }
++        
++    }
++    return 0;
+ }
+ 
+ int do_export(int nargs, char **args)
+
+project system/extras/
+diff --git a/su/Android.mk b/su/Android.mk
+index 0593cc9..c831cac 100644
+--- a/su/Android.mk
++++ b/su/Android.mk
+@@ -1,3 +1,5 @@
++ifeq ($(BUILD_AOSP_SU),true)
++
+ LOCAL_PATH:= $(call my-dir)
+ include $(CLEAR_VARS)
+ 
+@@ -13,3 +15,5 @@ LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
+ LOCAL_MODULE_TAGS := debug
+ 
+ include $(BUILD_EXECUTABLE)
++
++endif

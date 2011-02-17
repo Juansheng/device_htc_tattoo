@@ -6,7 +6,7 @@ sysclktz 0
 loglevel 3
 
 # setup the global environment
-    export PATH /sbin:/system/bin:/system/xbin:/data/local/bin
+    export PATH /sbin:/system/sbin:/system/bin:/system/xbin:/data/local/bin
     export LD_LIBRARY_PATH /system/lib
     export ANDROID_BOOTLOGO 1
     export ANDROID_CACHE /cache
@@ -155,10 +155,6 @@ loglevel 3
     chown system system /data/dalvik-cache
     chmod 0771 /data/dalvik-cache
 
-    mkdir /cache/dalvik-cache 0771 system system
-    chown system system /cache/dalvik-cache
-    chmod 0771 /cache/dalvik-cache
-
     # create the lost+found directories, so as to enforce our permissions
     mkdir /data/lost+found 0770
     mkdir /cache/lost+found 0770
@@ -169,9 +165,10 @@ loglevel 3
     chown root root /cache/lost+found
     chmod 0770 /cache/lost+found
 
-    # allow net_raw to have access to /dev/socket directory
-    chown root net_raw /dev/socket
-    chmod 0775 /dev/socket
+    # create data/drm directory
+    mkdir /data/drm 0774 drm drm
+    chown drm drm /data/drm
+    chmod 0774 /data/drm
 
 on boot
 # basic network init
@@ -250,14 +247,9 @@ on boot
     chown system system /sys/class/leds/red/brightness
     chown system system /sys/class/leds/green/brightness
     chown system system /sys/class/leds/blue/brightness
-    chown system system /sys/class/leds/amber/brightness
     chown system system /sys/class/leds/red/device/grpfreq
     chown system system /sys/class/leds/red/device/grppwm
     chown system system /sys/class/leds/red/device/blink
-    chown system system /sys/class/leds/green/blink
-    chown system system /sys/class/leds/green/off_timer
-    chown system system /sys/class/leds/amber/blink
-    chown system system /sys/class/leds/amber/off_timer
     chown system system /sys/class/timed_output/vibrator/enable
     chown system system /sys/module/sco/parameters/disable_esco
     chown system system /sys/kernel/ipv4/tcp_wmem_min
@@ -275,6 +267,9 @@ on boot
     setprop net.tcp.buffersize.umts    4094,87380,110208,4096,16384,110208
     setprop net.tcp.buffersize.edge    4093,26280,35040,4096,16384,35040
     setprop net.tcp.buffersize.gprs    4092,8760,11680,4096,8760,11680
+
+# Run sysinit
+    exec /system/bin/sysinit
 
     class_start default
 
@@ -296,13 +291,6 @@ on property:persist.service.adb.enable=1
 
 on property:persist.service.adb.enable=0
     stop adbd
-
-# Custom autostart scripts, by cn.fyodor
-# a dirty hack
-service bootsound /system/xbin/busybox run-parts /system/etc/init.d
-	user root
-	group root
-	oneshot
 
 service servicemanager /system/bin/servicemanager
     user system
@@ -330,6 +318,13 @@ service zygote /system/bin/app_process -Xzygote /system/bin --zygote --start-sys
     onrestart write /sys/android_power/request_state wake
     onrestart write /sys/power/state on
     onrestart restart media
+
+service drm /system/bin/drmserver
+    user drm
+    group system root inet
+
+service drmio /system/bin/drmioserver
+    user drmio
 
 service media /system/bin/mediaserver
     user media

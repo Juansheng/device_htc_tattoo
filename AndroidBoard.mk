@@ -24,6 +24,11 @@ ALL_PREBUILT += $(file)
 $(file) : $(LOCAL_PATH)/prebuilt/system/etc/firmware/brf6300.bin | $(ACP)
 	$(transform-prebuilt-to-target)
 
+file := $(TARGET_OUT)/etc/firmware/brf6350.bin
+ALL_PREBUILT += $(file)
+$(file) : $(LOCAL_PATH)/prebuilt/system/etc/firmware/brf6350.bin | $(ACP)
+	$(transform-prebuilt-to-target)
+
 file := $(TARGET_OUT_KEYLAYOUT)/bahamas-keypad.kl
 ALL_PREBUILT += $(file)
 $(file) : $(LOCAL_PATH)/prebuilt/system/usr/keylayout/bahamas-keypad.kl | $(ACP)
