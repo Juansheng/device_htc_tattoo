@@ -1,0 +1,24 @@
+Project : froyo-plus-aosp vender for HTC Tattoo device
+
+
+Notes:
+
+* Froyo-AOSP.patch MUST be applied before compiling the whole android project.
+
+  This patch contains:
+
+  - implemented BIONIC LIBC compiled well with Cyanogen's busybox and 
+    system/extra/su projects
+  - compilation can be done on i686 Linux Host
+  - adjusted prelink mapping to avoid link_image error
+  - the patch from Cy to make Camera work on Tattoo without GL
+  - the patch from Cy to implement 'exec' command in init
+  - optimization of Launcher2
+
+* Kernel had been applied with backported BFS-316 patch.
+
+* tattoo-hack.ko module had been built in the kernel.
+
+* busybox(Cy version) was needed to run scripts in /system/etc/init.d.
+
+* Camera is lamed right now. FM doesn't work. All other hardwares rock.
