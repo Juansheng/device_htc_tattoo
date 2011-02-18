@@ -164,23 +164,6 @@ index 386f379..f15281b 100644
  LOCAL_NO_DEFAULT_COMPILER_FLAGS := true
  
 
-project frameworks/base/
-diff --git a/services/surfaceflinger/Android.mk b/services/surfaceflinger/Android.mk
-index 86eb78d..99f5bd7 100644
---- a/services/surfaceflinger/Android.mk
-+++ b/services/surfaceflinger/Android.mk
-@@ -16,6 +16,10 @@ LOCAL_SRC_FILES:= \
-     Tokenizer.cpp \
-     Transform.cpp
- 
-+ifeq ($(BOARD_NO_RGBX_8888), true)
-+       LOCAL_CFLAGS += -DNO_RGBX_8888
-+endif
-+
- LOCAL_CFLAGS:= -DLOG_TAG=\"SurfaceFlinger\"
- LOCAL_CFLAGS += -DGL_GLEXT_PROTOTYPES -DEGL_EGLEXT_PROTOTYPES
- 
-
 project hardware/msm7k/
 diff --git a/libaudio/Android.mk b/libaudio/Android.mk
 index 5f28582..6b8c9cc 100644
