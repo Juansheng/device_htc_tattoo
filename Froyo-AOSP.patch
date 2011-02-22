@@ -484,7 +484,7 @@ index f6b653e..1cc6391 100644
 +            System.exit(0);
          }
      }
-
+ 
 diff --git a/src/com/android/camera/ui/GLRootView.java b/src/com/android/camera/ui/GLRootView.java
 index 8aeae04..663f263 100644
 --- a/src/com/android/camera/ui/GLRootView.java

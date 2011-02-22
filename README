@@ -5,7 +5,7 @@ Notes:
 
 * Froyo-AOSP.patch MUST be applied before compiling the whole android project.
 
-  This patch contains:
+  This patch mainly contains:
 
   - implemented BIONIC LIBC compiled well with Cyanogen's busybox and 
     system/extra/su projects
