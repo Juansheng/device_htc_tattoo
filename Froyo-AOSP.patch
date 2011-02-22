@@ -550,6 +550,41 @@ index 8219079..4e2fd10 100644
  
      public void setContent(GLView content) {
 
+project packages/apps/Gallery/
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index ff7c465..33d098e 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -94,6 +94,16 @@
+                 <category android:name="android.intent.category.DEFAULT" />
+                 <data android:mimeType="image/*" />
+             </intent-filter>
++            <intent-filter>
++                <action android:name="com.cooliris.media.action.REVIEW" />
++                <category android:name="android.intent.category.DEFAULT" />
++                <data android:mimeType="vnd.android.cursor.dir/image" />
++            </intent-filter>
++            <intent-filter>
++                <action android:name="com.cooliris.media.action.REVIEW" />
++                <category android:name="android.intent.category.DEFAULT" />
++                <data android:mimeType="image/*" />
++            </intent-filter>
+         </activity>
+         <activity android:name="com.android.camera.MovieView"
+                 android:label="@string/movieviewlabel"
+@@ -122,6 +132,11 @@
+                 <data android:mimeType="video/3gpp" />
+                 <data android:mimeType="video/3gpp2" />
+              </intent-filter>
++            <intent-filter>
++                <action android:name="com.cooliris.media.action.REVIEW" />
++                <category android:name="android.intent.category.DEFAULT" />
++                <data android:mimeType="video/*" />
++             </intent-filter>
+         </activity>
+         <activity android:name="com.android.camera.DeleteImage"
+                 android:label="@string/delete_images_message"
+
 project packages/apps/Launcher2/
 diff --git a/src/com/android/launcher2/Workspace.java b/src/com/android/launcher2/Workspace.java
 index cba1a3b..6d7a8ab 100644
