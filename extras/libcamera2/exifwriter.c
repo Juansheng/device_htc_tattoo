@@ -164,7 +164,7 @@ void writeExif( void *origData, void *destData , int origSize , uint32_t *result
 
   (*it).Tag = TAG_MAKE ;
   (*it).Format = FMT_STRING ;
-  (*it).Value = "Samsung" ;
+  (*it).Value = "HTC" ;
   (*it).DataLength = 8 ;
   (*it).GpsTag = FALSE ;
   
@@ -172,7 +172,7 @@ void writeExif( void *origData, void *destData , int origSize , uint32_t *result
   
   (*it).Tag = TAG_MODEL ;
   (*it).Format = FMT_STRING ;
-  (*it).Value = "Galaxy with GAOSP" ;
+  (*it).Value = "Tattoo with AOSP" ;
   (*it).DataLength = 18 ;
   (*it).GpsTag = FALSE ;
   

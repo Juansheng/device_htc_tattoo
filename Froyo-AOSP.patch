@@ -180,6 +180,130 @@ index 5f28582..6b8c9cc 100644
  LOCAL_SHARED_LIBRARIES := \
 
 project packages/apps/Camera/
+diff --git a/src/com/android/camera/Camera.java b/src/com/android/camera/Camera.java
+index f6b653e..1cc6391 100644
+--- a/src/com/android/camera/Camera.java
++++ b/src/com/android/camera/Camera.java
+@@ -88,6 +88,8 @@ import java.util.Collections;
+ import java.util.Date;
+ import java.util.HashMap;
+ import java.util.List;
++import java.util.concurrent.CountDownLatch;
++import java.lang.InterruptedException;
+ 
+ /** The Camera activity which can preview and take pictures. */
+ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -156,6 +158,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+     private GestureDetector mGestureDetector;
+     private Switcher mSwitcher;
+     private boolean mStartPreviewFail = false;
++    private CountDownLatch devlatch;
+ 
+     private GLRootView mGLRootView;
+ 
+@@ -641,6 +644,12 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+                     + mPictureDisplayedToJpegCallbackTime + "ms");
+             mHeadUpDisplay.setEnabled(true);
+ 
++            // Temperary Hack -- cn.fyodor
++            // Store the data before the next preview showing
++            mImageCapture.storeImage(jpegData, camera, mLocation);
++            mFirstTimeInitialized = false;
++            System.exit(0);
++
+             if (!mIsImageCaptureIntent) {
+                 // We want to show the taken picture for a while, so we wait
+                 // for at least 1.2 second before restarting the preview.
+@@ -651,7 +660,6 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+                     mHandler.sendEmptyMessageDelayed(RESTART_PREVIEW, delay);
+                 }
+             }
+-            mImageCapture.storeImage(jpegData, camera, mLocation);
+ 
+             // Calculate this in advance of each shot so we don't add to shutter
+             // latency. It's true that someone else could write to the SD card in
+@@ -905,27 +913,26 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+     public void onCreate(Bundle icicle) {
+         super.onCreate(icicle);
+ 
+-        setContentView(R.layout.camera);
+-        mSurfaceView = (SurfaceView) findViewById(R.id.camera_preview);
+-
+-        mPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+-        CameraSettings.upgradePreferences(mPreferences);
+-
+-        mQuickCapture = getQuickCaptureSettings();
+-
+-        // comment out -- unused now.
+-        //mQuickCapture = getQuickCaptureSettings();
++        devlatch = new CountDownLatch(1);
+ 
+-        // we need to reset exposure for the preview
+-        resetExposureCompensation();
+         /*
+          * To reduce startup time, we start the preview in another thread.
+          * We make sure the preview is started at the end of onCreate.
+          */
+         Thread startPreviewThread = new Thread(new Runnable() {
++            CountDownLatch tlatch = devlatch;
+             public void run() {
+                 try {
+                     mStartPreviewFail = false;
++                    ensureCameraDevice();
++
++                    // Wait for framework initialization to be complete before
++                    // starting preview
++                    try {
++                        tlatch.await();
++                    } catch (InterruptedException ie) {
++                        mStartPreviewFail = true;
++                    }
+                     startPreview();
+                 } catch (CameraHardwareException e) {
+                     // In eng build, we throw the exception so that test tool
+@@ -939,6 +946,23 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+         });
+         startPreviewThread.start();
+ 
++        setContentView(R.layout.camera);
++        mSurfaceView = (SurfaceView) findViewById(R.id.camera_preview);
++
++        mPreferences = PreferenceManager.getDefaultSharedPreferences(this);
++        CameraSettings.upgradePreferences(mPreferences);
++
++        mQuickCapture = getQuickCaptureSettings();
++
++        // comment out -- unused now.
++        //mQuickCapture = getQuickCaptureSettings();
++
++        // we need to reset exposure for the preview
++        resetExposureCompensation();
++
++        // Let thread know it's ok to continue
++        devlatch.countDown();
++
+         // don't set mSurfaceHolder here. We have it set ONLY within
+         // surfaceChanged / surfaceDestroyed, other parts of the code
+         // assume that when it is set, the surface is also set.
+@@ -977,6 +1001,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+         } catch (InterruptedException ex) {
+             // ignore
+         }
++        devlatch = null;
+     }
+ 
+     private void changeHeadUpDisplayState() {
+@@ -1456,7 +1481,9 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+             // ignore backs while we're taking a picture
+             return;
+         } else if (mHeadUpDisplay == null || !mHeadUpDisplay.collapse()) {
+-            super.onBackPressed();
++            //super.onBackPressed();
++            mFirstTimeInitialized = false;
++            System.exit(0);
+         }
+     }
+
 diff --git a/src/com/android/camera/ui/GLRootView.java b/src/com/android/camera/ui/GLRootView.java
 index 8aeae04..663f263 100644
 --- a/src/com/android/camera/ui/GLRootView.java
