@@ -43,7 +43,7 @@ extern "C" {
 
 #define CAMERA_SET_PARM_AUTO_FOCUS 13
 #define CAMERA_START_SNAPSHOT 40
-#define CAMERA_STOP_SNAPSHOT 41 /* guess, but likely based on previos ording */
+#define CAMERA_STOP_SNAPSHOT 42 //41
 
 #define AF_MODE_AUTO 2
 #define CAMERA_AUTO_FOCUS_CANCEL 1 //204
