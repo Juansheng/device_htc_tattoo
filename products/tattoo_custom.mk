@@ -46,7 +46,8 @@ PRODUCT_PACKAGES += \
     Sync \
     SyncProvider \
     Updater \
-    Superuser
+    Superuser \
+    FileManager
 # End of generic.mk
 
 # sdk builds
@@ -123,7 +124,7 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/META-INF/com/google/android/update-binary:META-INF/com/google/android/update-binary \
 	device/htc/tattoo/prebuilt/META-INF/com/google/android/updater-script:META-INF/com/google/android/updater-script \
 	device/htc/tattoo/prebuilt/META-INF/com/android/metadata:META-INF/com/android/metadata \
-	device/htc/tattoo/prebuilt/system/app/lysesoft.andexplorer.apk:system/app/lysesoft.andexplorer.apk \
+	device/htc/tattoo/prebuilt/system/app/HTCCalibrate.apk:system/app/HTCCalibrate.apk \
 	device/htc/tattoo/prebuilt/system/bin/akm8973:system/bin/akm8973 \
 	device/htc/tattoo/prebuilt/system/bin/sysinit:system/bin/sysinit \
 	device/htc/tattoo/prebuilt/system/xbin/bash:system/xbin/bash \
