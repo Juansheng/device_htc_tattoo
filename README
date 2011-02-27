@@ -21,4 +21,6 @@ Notes:
 
 * busybox(Cy version) was needed to run scripts in /system/etc/init.d.
 
+* Superuser and FileManager apks should be downloaded from github.
+
 * Camera is lamed right now. FM doesn't work. All other hardwares rock.

@@ -43,7 +43,7 @@ index aaa5640..93120cb 100644
 
 project build/
 diff --git a/core/main.mk b/core/main.mk
-index 4c772bb..0563308 100644
+index 4c772bb..d451822 100644
 --- a/core/main.mk
 +++ b/core/main.mk
 @@ -68,7 +68,7 @@ $(info Checking build tools versions...)
@@ -55,6 +55,15 @@ index 4c772bb..0563308 100644
  $(warning ************************************************************)
  $(warning You are attempting to build on a 32-bit system.)
  $(warning Only 64-bit build environments are supported beyond froyo/2.2.)
+@@ -225,7 +225,7 @@ ifneq (,$(user_variant))
+   
+ else # !user_variant
+   # Turn on checkjni for non-user builds.
+-  ADDITIONAL_BUILD_PROPERTIES += ro.kernel.android.checkjni=1
++  ADDITIONAL_BUILD_PROPERTIES += ro.kernel.android.checkjni=0
+   # Set device insecure for non-user builds.
+   ADDITIONAL_DEFAULT_PROPERTIES += ro.secure=0
+   # Allow mock locations by default for non user builds
 diff --git a/core/prelink-linux-arm.map b/core/prelink-linux-arm.map
 index 22f5f34..1e779b2 100644
 --- a/core/prelink-linux-arm.map
@@ -587,7 +596,7 @@ index ff7c465..33d098e 100644
 
 project packages/apps/Launcher2/
 diff --git a/src/com/android/launcher2/Workspace.java b/src/com/android/launcher2/Workspace.java
-index cba1a3b..6d7a8ab 100644
+index cba1a3b..935f13b 100644
 --- a/src/com/android/launcher2/Workspace.java
 +++ b/src/com/android/launcher2/Workspace.java
 @@ -62,7 +62,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
@@ -595,12 +604,18 @@ index cba1a3b..6d7a8ab 100644
       * The velocity at which a fling gesture will cause us to snap to the next screen
       */
 -    private static final int SNAP_VELOCITY = 600;
-+    private static final int SNAP_VELOCITY = 200;
++    private static final int SNAP_VELOCITY = 999;
  
      private final WallpaperManager mWallpaperManager;
      
-@@ -131,7 +131,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
-     private static final float FLING_VELOCITY_INFLUENCE = 0.4f;
+@@ -127,11 +127,11 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+ 
+     private WorkspaceOvershootInterpolator mScrollInterpolator;
+ 
+-    private static final float BASELINE_FLING_VELOCITY = 2500.f;
+-    private static final float FLING_VELOCITY_INFLUENCE = 0.4f;
++    private static final float BASELINE_FLING_VELOCITY = 5000.0f;
++    private static final float FLING_VELOCITY_INFLUENCE = 1.1f;
      
      private static class WorkspaceOvershootInterpolator implements Interpolator {
 -        private static final float DEFAULT_TENSION = 1.3f;
