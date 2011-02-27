@@ -48,6 +48,8 @@ extern "C" {
 #define AF_MODE_AUTO 2
 #define CAMERA_AUTO_FOCUS_CANCEL 1 //204
 
+#define PAD_TO_WORD(x) ((x&1) ? x+1 : x)
+
 typedef enum
 {
     CAMERA_WB_MIN_MINUS_1,
@@ -187,6 +189,13 @@ private:
     void stopPreviewInternal();
     friend void *auto_focus_thread(void *user);
     void runAutoFocus();
+    bool native_register_preview_bufs(int camfd,
+                                      cam_ctrl_dimension_t *pdim,
+                                      struct msm_frame_t *frame,
+                                      bool active);
+    bool native_unregister_preview_bufs(int camfd,
+                                        cam_ctrl_dimension_t *pdim,
+                                        struct msm_frame_t *frame);
     bool native_set_dimension (int camfd);
     bool native_jpeg_encode (void);
     bool native_set_parm(cam_ctrl_type type, uint16_t length, void *value);
