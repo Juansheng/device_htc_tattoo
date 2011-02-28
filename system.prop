@@ -15,7 +15,7 @@ ro.ril.htcmaskw1=14449
 # Time between scans in seconds. Keep it high to minimize battery drain.
 # This only affects the case in which there are remembered access points,
 # but none are in range.
-wifi.supplicant_scan_interval=45
+wifi.supplicant_scan_interval=120
 
 # density in DPI of the LCD of this board. This is used to scale the UI
 # appropriately. If this property is not defined, the default value is 160 dpi. 
@@ -48,6 +48,9 @@ dalvik.vm.execution-mode=int:fast
 
 # The OpenGL ES API level, 1.0 here
 ro.opengles.version=65536
+
+# Make scrolling smoother(Exp)
+windowsmgr.max_events_per_sec=260
 
 # Active stagefright
 media.stagefright.enable-http=true
