@@ -158,3 +158,11 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/lib/librs_jni.so:system/lib/librs_jni.so \
 	device/htc/tattoo/prebuilt/system/lib/libt9.so:system/lib/libt9.so
 
+# Ubuntu fonts
+PRODUCT_COPY_FILES += \
+	device/htc/tattoo/prebuilt/system/fonts/Clockopia.ttf:system/fonts/Clockopia.ttf \
+	device/htc/tattoo/prebuilt/system/fonts/DroidSans.ttf:system/fonts/DroidSans.ttf \
+	device/htc/tattoo/prebuilt/system/fonts/DroidSansFallback.ttf:system/fonts/DroidSansFallback.ttf \
+	device/htc/tattoo/prebuilt/system/fonts/DroidSansMono.ttf:system/fonts/DroidSansMono.ttf \
+	device/htc/tattoo/prebuilt/system/fonts/DroidSans-Bold.ttf:system/fonts/DroidSans-Bold.ttf
+
