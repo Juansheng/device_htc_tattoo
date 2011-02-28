@@ -111,6 +111,190 @@ index 22f5f34..1e779b2 100644
  liblept.so              0x9CA00000 # [~5M] for external/leptonica
 +
 
+project dalvik/
+diff --git a/libdex/Android.mk b/libdex/Android.mk
+index df45f04..4a6ef9a 100644
+--- a/libdex/Android.mk
++++ b/libdex/Android.mk
+@@ -44,8 +44,25 @@ dex_include_files := \
+ ifneq ($(SDK_ONLY),true)  # SDK_only doesn't need device version
+ 
+ include $(CLEAR_VARS)
++
++# Make a debugging version when building the simulator (if not told
++# otherwise) and when explicitly asked.
++dvm_make_debug_vm := false
++ifeq ($(strip $(DEBUG_DALVIK_VM)),)
++  ifeq ($(dvm_simulator),true)
++    dvm_make_debug_vm := true
++  endif
++else
++  dvm_make_debug_vm := $(DEBUG_DALVIK_VM)
++endif
++
+ LOCAL_SRC_FILES := $(dex_src_files)
+ LOCAL_C_INCLUDES += $(dex_include_files)
++LOCAL_CFLAGS += -include "dalvikdefines.h"
++ifeq ($(dvm_make_debug_vm),false)
++  # hide ELF symbols to reduce code size
++  LOCAL_CFLAGS += -fvisibility=hidden
++endif
+ LOCAL_MODULE := libdex
+ include $(BUILD_STATIC_LIBRARY)
+ 
+@@ -60,5 +77,6 @@ endif # !SDK_ONLY
+ include $(CLEAR_VARS)
+ LOCAL_SRC_FILES := $(dex_src_files)
+ LOCAL_C_INCLUDES += $(dex_include_files)
++LOCAL_CFLAGS += -include "dalvikdefines.h"
+ LOCAL_MODULE := libdex
+ include $(BUILD_HOST_STATIC_LIBRARY)
+diff --git a/libdex/OptInvocation.c b/libdex/OptInvocation.c
+index 8ce918b..ae0e237 100644
+--- a/libdex/OptInvocation.c
++++ b/libdex/OptInvocation.c
+@@ -116,6 +116,7 @@ char* dexOptGenerateCacheFileName(const char* fileName, const char* subFileName)
+  *
+  * Returns 0 on success, errno on failure.
+  */
++DEX_EXPORT
+ int dexOptCreateEmptyHeader(int fd)
+ {
+     DexOptHeader optHdr;
+diff --git a/libdex/ZipArchive.c b/libdex/ZipArchive.c
+index 7c7e18e..48e8fd9 100644
+--- a/libdex/ZipArchive.c
++++ b/libdex/ZipArchive.c
+@@ -300,6 +300,7 @@ int dexZipOpenArchive(const char* fileName, ZipArchive* pArchive)
+ /*
+  * Prepare to access a ZipArchive in an open file descriptor.
+  */
++DEX_EXPORT
+ int dexZipPrepArchive(int fd, const char* debugFileName, ZipArchive* pArchive)
+ {
+     MemMapping map;
+@@ -347,6 +348,7 @@ bail:
+  *
+  * NOTE: the ZipArchive may not have been fully created.
+  */
++DEX_EXPORT
+ void dexZipCloseArchive(ZipArchive* pArchive)
+ {
+     LOGV("Closing archive %p\n", pArchive);
+@@ -370,6 +372,7 @@ void dexZipCloseArchive(ZipArchive* pArchive)
+  *
+  * Returns 0 if not found.
+  */
++DEX_EXPORT
+ ZipEntry dexZipFindEntry(const ZipArchive* pArchive, const char* entryName)
+ {
+     int nameLen = strlen(entryName);
+@@ -424,6 +427,7 @@ ZipEntry findEntryByIndex(ZipArchive* pArchive, int idx)
+  * Returns "false" if the offsets to the fields or the contents of the fields
+  * appear to be bogus.
+  */
++DEX_EXPORT
+ bool dexZipGetEntryInfo(const ZipArchive* pArchive, ZipEntry entry,
+     int* pMethod, long* pUncompLen, long* pCompLen, off_t* pOffset,
+     long* pModWhen, long* pCrc32)
+@@ -599,6 +603,7 @@ bail:
+  * TODO: this doesn't verify the data's CRC, but probably should (especially
+  * for uncompressed data).
+  */
++DEX_EXPORT
+ bool dexZipExtractEntryToFile(const ZipArchive* pArchive,
+     const ZipEntry entry, int fd)
+ {
+diff --git a/vm/Dvm.mk b/vm/Dvm.mk
+index baf41c6..ddc8519 100644
+--- a/vm/Dvm.mk
++++ b/vm/Dvm.mk
+@@ -26,6 +26,7 @@
+ #
+ LOCAL_CFLAGS += -fstrict-aliasing -Wstrict-aliasing=2 -fno-align-jumps
+ #LOCAL_CFLAGS += -DUSE_INDIRECT_REF
++LOCAL_CFLAGS += -include "dalvikdefines.h"
+ 
+ #
+ # Optional features.  These may impact the size or performance of the VM.
+@@ -64,6 +65,7 @@ ifeq ($(dvm_make_debug_vm),true)
+   # - GDB helpers enabled
+   # - LOGV
+   # - assert()
++  # - full ELF symbols
+   #
+   LOCAL_CFLAGS += -DWITH_INSTR_CHECKS
+   LOCAL_CFLAGS += -DWITH_EXTRA_OBJECT_VALIDATION
+@@ -83,6 +85,7 @@ else  # !dvm_make_debug_vm
+   # - all development features disabled
+   # - compiler optimizations enabled (redundant for "release" builds)
+   # - (debugging and profiling still enabled)
++  # - minimize ELF symbols to reduce code size by 10%
+   #
+   #LOCAL_CFLAGS += -DNDEBUG -DLOG_NDEBUG=1
+   # "-O2" is redundant for device (release) but useful for sim (debug)
+@@ -91,6 +94,8 @@ else  # !dvm_make_debug_vm
+   LOCAL_CFLAGS += -DDVM_SHOW_EXCEPTION=1
+   # if you want to try with assertions on the device, add:
+   #LOCAL_CFLAGS += -UNDEBUG -DDEBUG=1 -DLOG_NDEBUG=1 -DWITH_DALVIK_ASSERT
++  # use GCC Visibility to reduce the footprint of runtime library
++  LOCAL_CFLAGS += -fvisibility=hidden
+ endif  # !dvm_make_debug_vm
+ 
+ # bug hunting: checksum and verify interpreted stack when making JNI calls
+diff --git a/vm/Init.c b/vm/Init.c
+index ca6e593..395dc60 100644
+--- a/vm/Init.c
++++ b/vm/Init.c
+@@ -1519,6 +1519,7 @@ static bool dvmInitJDWP(void)
+  *
+  * Returns 0 on success.
+  */
++DVM_EXPORT
+ int dvmPrepForDexOpt(const char* bootClassPath, DexOptimizerMode dexOptMode,
+     DexClassVerifyMode verifyMode, int dexoptFlags)
+ {
+diff --git a/vm/Jni.c b/vm/Jni.c
+index 6692f3b..9ce2f80 100644
+--- a/vm/Jni.c
++++ b/vm/Jni.c
+@@ -4255,6 +4255,7 @@ void dvmLateEnableCheckedJni(void)
+ /*
+  * Not supported.
+  */
++DVM_EXPORT
+ jint JNI_GetDefaultJavaVMInitArgs(void* vm_args)
+ {
+     return JNI_ERR;
+@@ -4265,6 +4266,7 @@ jint JNI_GetDefaultJavaVMInitArgs(void* vm_args)
+  *
+  * We always have zero or one.
+  */
++DVM_EXPORT
+ jint JNI_GetCreatedJavaVMs(JavaVM** vmBuf, jsize bufLen, jsize* nVMs)
+ {
+     if (gDvm.vmList != NULL) {
+@@ -4286,6 +4288,7 @@ jint JNI_GetCreatedJavaVMs(JavaVM** vmBuf, jsize bufLen, jsize* nVMs)
+  * The current thread becomes the main VM thread.  We return immediately,
+  * which effectively means the caller is executing in a native method.
+  */
++DVM_EXPORT
+ jint JNI_CreateJavaVM(JavaVM** p_vm, JNIEnv** p_env, void* vm_args)
+ {
+     const JavaVMInitArgs* args = (JavaVMInitArgs*) vm_args;
+diff --git a/vm/analysis/DexOptimize.c b/vm/analysis/DexOptimize.c
+index a5b8b6f..b134a3f 100644
+--- a/vm/analysis/DexOptimize.c
++++ b/vm/analysis/DexOptimize.c
+@@ -508,6 +508,7 @@ bool dvmOptimizeDexFile(int fd, off_t dexOffset, long dexLength,
+  *
+  * Returns "true" on success.
+  */
++DVM_EXPORT
+ bool dvmContinueOptimization(int fd, off_t dexOffset, long dexLength,
+     const char* fileName, u4 modWhen, u4 crc, bool isBootstrap)
+ {
+
 project development/
 diff --git a/apps/Term/AndroidManifest.xml b/apps/Term/AndroidManifest.xml
 index 7084d2c..845cc9c 100644
