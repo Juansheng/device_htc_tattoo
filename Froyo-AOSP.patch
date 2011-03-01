@@ -1,69 +1,105 @@
 
-project bionic/
-diff --git a/libc/bionic/__set_errno.c b/libc/bionic/__set_errno.c
-index 163d404..5cf1637 100644
---- a/libc/bionic/__set_errno.c
-+++ b/libc/bionic/__set_errno.c
-@@ -40,7 +40,7 @@ int __set_errno(int n)
-  * (tail-called in the case of 0-4 arg versions)
-  */
- 
--__LIBC_HIDDEN__
-+//__LIBC_HIDDEN__
- int __set_syscall_errno(int n)
- {
-         /* some syscalls, mmap() for example, have valid return
-diff --git a/libc/netbsd/resolv/res_state.c b/libc/netbsd/resolv/res_state.c
-index 3209b6f..ffbfcb0 100644
---- a/libc/netbsd/resolv/res_state.c
-+++ b/libc/netbsd/resolv/res_state.c
-@@ -134,7 +134,7 @@ _res_thread_get(void)
-     return rt;
- }
- 
--__LIBC_HIDDEN__
-+//__LIBC_HIDDEN__
- struct __res_state _nres;
- 
- #if 0
-diff --git a/libc/stdio/mktemp.c b/libc/stdio/mktemp.c
-index aaa5640..93120cb 100644
---- a/libc/stdio/mktemp.c
-+++ b/libc/stdio/mktemp.c
-@@ -65,7 +65,8 @@ mkdtemp(char *path)
- 
- char *_mktemp(char *);
- 
--__LIBC_HIDDEN__ char *
-+//__LIBC_HIDDEN__ char *
-+char *
- _mktemp(char *path)
- {
- 	return(_gettemp(path, (int *)NULL, 0, 0) ? path : (char *)NULL);
-
 project build/
+diff --git a/buildspec.mk.default b/buildspec.mk.default
+index 6303efc..c568a82 100644
+--- a/buildspec.mk.default
++++ b/buildspec.mk.default
+@@ -115,4 +115,4 @@ endif
+ # variable will be changed.  After you have modified this file with the new
+ # changes (see buildspec.mk.default), update this to the new value from
+ # buildspec.mk.default.
+-BUILD_ENV_SEQUENCE_NUMBER := 9
++BUILD_ENV_SEQUENCE_NUMBER := 10
+diff --git a/core/droiddoc.mk b/core/droiddoc.mk
+index 03ffa55..2f76f9b 100644
+--- a/core/droiddoc.mk
++++ b/core/droiddoc.mk
+@@ -56,6 +56,13 @@ endif
+ 
+ $(full_target): PRIVATE_CLASSPATH:=$(LOCAL_CLASSPATH)
+ full_java_lib_deps :=
++ 
++$(full_target): PRIVATE_BOOTCLASSPATH :=
++ifeq ($(BUILD_OS),linux)
++# You have to set bootclasspath for javadoc manually on linux since Java 6.
++host_jdk_rt_jar := $(dir $(HOST_JDK_TOOLS_JAR))../jre/lib/rt.jar
++$(full_target): PRIVATE_BOOTCLASSPATH := $(host_jdk_rt_jar)
++endif
+ 
+ ifneq ($(LOCAL_IS_HOST_MODULE),true)
+ 
+@@ -165,6 +172,7 @@ $(full_target): $(full_src_files) $(droiddoc_templates) $(droiddoc) $(html_dir_f
+                 -templatedir $(PRIVATE_CUSTOM_TEMPLATE_DIR) \
+                 -templatedir $(PRIVATE_TEMPLATE_DIR) \
+                 $(PRIVATE_DROIDDOC_HTML_DIR) \
++                $(addprefix -bootclasspath ,$(PRIVATE_BOOTCLASSPATH)) \
+                 $(addprefix -classpath ,$(PRIVATE_CLASSPATH)) \
+                 -sourcepath $(PRIVATE_SOURCE_PATH)$(addprefix :,$(PRIVATE_CLASSPATH)) \
+                 -d $(PRIVATE_OUT_DIR) \
+diff --git a/core/envsetup.mk b/core/envsetup.mk
+index 86aa2f3..5f2e8bb 100644
+--- a/core/envsetup.mk
++++ b/core/envsetup.mk
+@@ -16,7 +16,7 @@ include $(BUILD_SYSTEM)/version_defaults.mk
+ # people who haven't re-run those will have to do so before they
+ # can build.  Make sure to also update the corresponding value in
+ # buildspec.mk.default and envsetup.sh.
+-CORRECT_BUILD_ENV_SEQUENCE_NUMBER := 9
++CORRECT_BUILD_ENV_SEQUENCE_NUMBER := 10
+ 
+ # ---------------------------------------------------------------
+ # The product defaults to generic on hardware and sim on sim
 diff --git a/core/main.mk b/core/main.mk
-index 4c772bb..d451822 100644
+index ddd05bb..278c75a 100644
 --- a/core/main.mk
 +++ b/core/main.mk
-@@ -68,7 +68,7 @@ $(info Checking build tools versions...)
+@@ -98,18 +98,15 @@ $(error Directory names containing spaces not supported)
+ endif
  
- ifeq ($(BUILD_OS),linux)
- build_arch := $(shell uname -m)
--ifneq (64,$(findstring 64,$(build_arch)))
-+ifneq (i686,$(findstring i686,$(build_arch)))
- $(warning ************************************************************)
- $(warning You are attempting to build on a 32-bit system.)
- $(warning Only 64-bit build environments are supported beyond froyo/2.2.)
-@@ -225,7 +225,7 @@ ifneq (,$(user_variant))
-   
- else # !user_variant
-   # Turn on checkjni for non-user builds.
--  ADDITIONAL_BUILD_PROPERTIES += ro.kernel.android.checkjni=1
-+  ADDITIONAL_BUILD_PROPERTIES += ro.kernel.android.checkjni=0
-   # Set device insecure for non-user builds.
-   ADDITIONAL_DEFAULT_PROPERTIES += ro.secure=0
-   # Allow mock locations by default for non user builds
+ 
+-# The windows build server currently uses 1.6.  This will be fixed.
+-ifneq ($(HOST_OS),windows)
+-
+ # Check for the correct version of java
+-java_version := $(shell java -version 2>&1 | head -n 1 | grep '[ "]1\.5[\. "$$]')
++java_version := $(shell java -version 2>&1 | head -n 1 | grep '[ "]1\.6[\. "$$]')
+ ifeq ($(strip $(java_version)),)
+ $(info ************************************************************)
+ $(info You are attempting to build with the incorrect version)
+ $(info of java.)
+ $(info $(space))
+ $(info Your version is: $(shell java -version 2>&1 | head -n 1).)
+-$(info The correct version is: 1.5.)
++$(info The correct version is: 1.6.)
+ $(info $(space))
+ $(info Please follow the machine setup instructions at)
+ $(info $(space)$(space)$(space)$(space)http://source.android.com/download)
+@@ -118,14 +115,14 @@ $(error stop)
+ endif
+ 
+ # Check for the correct version of javac
+-javac_version := $(shell javac -version 2>&1 | head -n 1 | grep '[ "]1\.5[\. "$$]')
++javac_version := $(shell javac -version 2>&1 | head -n 1 | grep '[ "]1\.6[\. "$$]')
+ ifeq ($(strip $(javac_version)),)
+ $(info ************************************************************)
+ $(info You are attempting to build with the incorrect version)
+ $(info of javac.)
+ $(info $(space))
+ $(info Your version is: $(shell javac -version 2>&1 | head -n 1).)
+-$(info The correct version is: 1.5.)
++$(info The correct version is: 1.6.)
+ $(info $(space))
+ $(info Please follow the machine setup instructions at)
+ $(info $(space)$(space)$(space)$(space)http://source.android.com/download)
+@@ -133,8 +130,6 @@ $(info ************************************************************)
+ $(error stop)
+ endif
+ 
+-endif # windows
+-
+ $(shell echo 'VERSIONS_CHECKED := $(VERSION_CHECK_SEQUENCE_NUMBER)' \
+         > $(OUT_DIR)/versions_checked.mk)
+ endif
 diff --git a/core/prelink-linux-arm.map b/core/prelink-linux-arm.map
 index 22f5f34..1e779b2 100644
 --- a/core/prelink-linux-arm.map
@@ -110,6 +146,87 @@ index 22f5f34..1e779b2 100644
  libinterstitial.so      0x9CF00000 # [<64K] for goggles
  liblept.so              0x9CA00000 # [~5M] for external/leptonica
 +
+diff --git a/envsetup.sh b/envsetup.sh
+index f4dfc55..1161bb5 100644
+--- a/envsetup.sh
++++ b/envsetup.sh
+@@ -83,7 +83,7 @@ function setpaths()
+         echo "Couldn't locate the top of the tree.  Try setting TOP."
+         return
+     fi
+-
++ 
+     ##################################################################
+     #                                                                #
+     #              Read me before you modify this code               #
+@@ -99,6 +99,9 @@ function setpaths()
+     if [ -n $ANDROID_BUILD_PATHS ] ; then
+         export PATH=${PATH/$ANDROID_BUILD_PATHS/}
+     fi
++    if [ -n $ANDROID_PRE_BUILD_PATHS ] ; then
++        export PATH=${PATH/$ANDROID_PRE_BUILD_PATHS/}
++    fi
+ 
+     # and in with the new
+     CODE_REVIEWS=
+@@ -109,6 +112,15 @@ function setpaths()
+     export ANDROID_BUILD_PATHS=:$(get_build_var ANDROID_BUILD_PATHS):$ANDROID_QTOOLS:$ANDROID_TOOLCHAIN:$ANDROID_EABI_TOOLCHAIN$CODE_REVIEWS
+     export PATH=$PATH$ANDROID_BUILD_PATHS
+ 
++    unset ANDROID_JAVA_TOOLCHAIN
++    if [ -n "$JAVA_HOME" ]; then
++        export ANDROID_JAVA_TOOLCHAIN=$JAVA_HOME/bin
++    fi
++    export ANDROID_PRE_BUILD_PATHS=$ANDROID_JAVA_TOOLCHAIN
++    if [ -n "$ANDROID_PRE_BUILD_PATHS" ]; then
++        export PATH=$ANDROID_PRE_BUILD_PATHS:$PATH
++    fi
++
+     unset ANDROID_PRODUCT_OUT
+     export ANDROID_PRODUCT_OUT=$(get_abs_build_var PRODUCT_OUT)
+     export OUT=$ANDROID_PRODUCT_OUT
+@@ -134,6 +146,7 @@ function printconfig()
+ function set_stuff_for_environment()
+ {
+     settitle
++    setjavahome
+     setpaths
+     set_sequence_number
+ 
+@@ -145,7 +158,7 @@ function set_stuff_for_environment()
+ 
+ function set_sequence_number()
+ {
+-    export BUILD_ENV_SEQUENCE_NUMBER=9
++    export BUILD_ENV_SEQUENCE_NUMBER=10
+ }
+ 
+ function settitle()
+@@ -1053,19 +1066,19 @@ function godir () {
+     cd $T/$pathname
+ }
+ 
+-# Force JAVA_HOME to point to java 1.5 if it isn't already set
+-if [ "$STAY_OFF_MY_LAWN" = "" ]; then
++# Force JAVA_HOME to point to java 1.6 if it isn't already set
++function setjavahome() {
+     if [ ! "$JAVA_HOME" ]; then
+         case `uname -s` in
+             Darwin)
+-                export JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Versions/1.5/Home
++                export JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Versions/1.6/Home
+                 ;;
+             *)
+-                export JAVA_HOME=/usr/lib/jvm/java-1.5.0-sun
++                export JAVA_HOME=/usr/lib/jvm/java-6-sun
+                 ;;
+         esac
+     fi
+-fi
++}
+ 
+ # determine whether arrays are zero-based (bash) or one-based (zsh)
+ _xarray=(a b c)
 
 project dalvik/
 diff --git a/libdex/Android.mk b/libdex/Android.mk
@@ -243,10 +360,10 @@ index baf41c6..ddc8519 100644
  
  # bug hunting: checksum and verify interpreted stack when making JNI calls
 diff --git a/vm/Init.c b/vm/Init.c
-index ca6e593..395dc60 100644
+index 6630395..ab1be0e 100644
 --- a/vm/Init.c
 +++ b/vm/Init.c
-@@ -1519,6 +1519,7 @@ static bool dvmInitJDWP(void)
+@@ -1491,6 +1491,7 @@ static bool dvmInitJDWP(void)
   *
   * Returns 0 on success.
   */
@@ -255,18 +372,10 @@ index ca6e593..395dc60 100644
      DexClassVerifyMode verifyMode, int dexoptFlags)
  {
 diff --git a/vm/Jni.c b/vm/Jni.c
-index 6692f3b..9ce2f80 100644
+index 6692f3b..13a7c69 100644
 --- a/vm/Jni.c
 +++ b/vm/Jni.c
-@@ -4255,6 +4255,7 @@ void dvmLateEnableCheckedJni(void)
- /*
-  * Not supported.
-  */
-+DVM_EXPORT
- jint JNI_GetDefaultJavaVMInitArgs(void* vm_args)
- {
-     return JNI_ERR;
-@@ -4265,6 +4266,7 @@ jint JNI_GetDefaultJavaVMInitArgs(void* vm_args)
+@@ -4265,6 +4265,7 @@ jint JNI_GetDefaultJavaVMInitArgs(void* vm_args)
   *
   * We always have zero or one.
   */
@@ -274,7 +383,7 @@ index 6692f3b..9ce2f80 100644
  jint JNI_GetCreatedJavaVMs(JavaVM** vmBuf, jsize bufLen, jsize* nVMs)
  {
      if (gDvm.vmList != NULL) {
-@@ -4286,6 +4288,7 @@ jint JNI_GetCreatedJavaVMs(JavaVM** vmBuf, jsize bufLen, jsize* nVMs)
+@@ -4286,6 +4287,7 @@ jint JNI_GetCreatedJavaVMs(JavaVM** vmBuf, jsize bufLen, jsize* nVMs)
   * The current thread becomes the main VM thread.  We return immediately,
   * which effectively means the caller is executing in a native method.
   */
@@ -297,7 +406,7 @@ index a5b8b6f..b134a3f 100644
 
 project development/
 diff --git a/apps/Term/AndroidManifest.xml b/apps/Term/AndroidManifest.xml
-index 7084d2c..845cc9c 100644
+index 7084d2c..6471eb5 100644
 --- a/apps/Term/AndroidManifest.xml
 +++ b/apps/Term/AndroidManifest.xml
 @@ -8,7 +8,7 @@
@@ -305,12 +414,12 @@ index 7084d2c..845cc9c 100644
              <intent-filter>
                  <action android:name="android.intent.action.MAIN" />
 -                <category android:name="android.intent.category.TEST" />
-+                <category android:name="android.intent.category.LAUNCHER"/>
++                <category android:name="android.intent.category.LAUNCHER" />
              </intent-filter>
          </activity>
          <activity android:name="TermPreferences"/>
 diff --git a/apps/Term/src/com/android/term/Term.java b/apps/Term/src/com/android/term/Term.java
-index 6d3796a..00ab533 100644
+index cbf94cf..c483441 100644
 --- a/apps/Term/src/com/android/term/Term.java
 +++ b/apps/Term/src/com/android/term/Term.java
 @@ -2646,63 +2646,12 @@ class EmulatorView extends View implements GestureDetector.OnGestureListener {
@@ -416,71 +525,35 @@ index 6d3796a..00ab533 100644
              public boolean setComposingText(CharSequence text, int newCursorPosition) {
                  return true;
 
-project external/clearsilver/
-diff --git a/cgi/Android.mk b/cgi/Android.mk
-index 21c534b..acf08b2 100644
---- a/cgi/Android.mk
-+++ b/cgi/Android.mk
-@@ -13,8 +13,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/..
- LOCAL_CFLAGS := -fPIC
+project external/stlport/
+diff --git a/Android.mk b/Android.mk
+index 79ee889..7760f92 100755
+--- a/Android.mk
++++ b/Android.mk
+@@ -51,9 +51,6 @@ LOCAL_MODULE := libstlport
+ LOCAL_CFLAGS := $(libstlport_cflags)
+ LOCAL_CPPFLAGS := $(libstlport_cppflags)
  
- # This forces a 64-bit build for Java6
--LOCAL_CFLAGS += -m64
--LOCAL_LDFLAGS += -m64
-+#LOCAL_CFLAGS += -m64
-+#LOCAL_LDFLAGS += -m64
+-LOCAL_NDK_VERSION := 4
+-LOCAL_SDK_VERSION := 8
+-
+ include $(LOCAL_PATH)/libstlport.mk
+ include $(BUILD_SHARED_LIBRARY)
  
- LOCAL_NO_DEFAULT_COMPILER_FLAGS := true
+@@ -67,9 +64,6 @@ LOCAL_MODULE := libstlport_static
+ LOCAL_CFLAGS := $(libstlport_cflags)
+ LOCAL_CPPFLAGS := $(libstlport_cppflags)
  
-diff --git a/cs/Android.mk b/cs/Android.mk
-index 9f0e30a..c36a1e1 100644
---- a/cs/Android.mk
-+++ b/cs/Android.mk
-@@ -9,8 +9,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/..
- LOCAL_CFLAGS := -fPIC
- 
- # This forces a 64-bit build for Java6
--LOCAL_CFLAGS += -m64
--LOCAL_LDFLAGS += -m64
-+#LOCAL_CFLAGS += -m64
-+#LOCAL_LDFLAGS += -m64
- 
- LOCAL_NO_DEFAULT_COMPILER_FLAGS := true
- 
-diff --git a/java-jni/Android.mk b/java-jni/Android.mk
-index 21b4fd1..51d4c25 100644
---- a/java-jni/Android.mk
-+++ b/java-jni/Android.mk
-@@ -34,8 +34,8 @@ LOCAL_C_INCLUDES := \
- LOCAL_CFLAGS += -fPIC
- 
- # This forces a 64-bit build for Java6
--LOCAL_CFLAGS += -m64
--LOCAL_LDFLAGS += -m64
-+#LOCAL_CFLAGS += -m64
-+#LOCAL_LDFLAGS += -m64
- 
- LOCAL_NO_DEFAULT_COMPILER_FLAGS := true
- 
-diff --git a/util/Android.mk b/util/Android.mk
-index 386f379..f15281b 100644
---- a/util/Android.mk
-+++ b/util/Android.mk
-@@ -18,8 +18,8 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH)/..
- LOCAL_CFLAGS := -fPIC
- 
- # This forces a 64-bit build for Java6
--LOCAL_CFLAGS += -m64
--LOCAL_LDFLAGS += -m64
-+#LOCAL_CFLAGS += -m64
-+#LOCAL_LDFLAGS += -m64
- 
- LOCAL_NO_DEFAULT_COMPILER_FLAGS := true
+-LOCAL_NDK_VERSION := 4
+-LOCAL_SDK_VERSION := 8
+-
+ include $(LOCAL_PATH)/libstlport.mk
+ include $(BUILD_STATIC_LIBRARY)
  
 
 project frameworks/base/
 diff --git a/services/java/com/android/server/status/StatusBarPolicy.java b/services/java/com/android/server/status/StatusBarPolicy.java
-index 3b0c436..a32a317 100644
+index 94d1cb4..9273271 100644
 --- a/services/java/com/android/server/status/StatusBarPolicy.java
 +++ b/services/java/com/android/server/status/StatusBarPolicy.java
 @@ -294,6 +294,10 @@ public class StatusBarPolicy {
@@ -525,18 +598,44 @@ index 3b0c436..a32a317 100644
          filter.addAction(AudioManager.RINGER_MODE_CHANGED_ACTION);
          filter.addAction(AudioManager.VIBRATE_SETTING_CHANGED_ACTION);
          filter.addAction(BluetoothAdapter.ACTION_STATE_CHANGED);
-@@ -1195,6 +1209,11 @@ public class StatusBarPolicy {
+@@ -1192,6 +1206,11 @@ public class StatusBarPolicy {
+             mVolumeVisible = visible;
          }
      }
- 
++ 
 +    private final void updateHeadset(Intent intent) {
 +        int state = intent.getIntExtra("state", 0);
 +        mService.setIconVisibility(mHeadsetIcon, (state == 1));
 +    }
-+
+ 
      private final void updateBluetooth(Intent intent) {
          int iconId = com.android.internal.R.drawable.stat_sys_data_bluetooth;
-         String action = intent.getAction();
+diff --git a/tools/aapt/Android.mk b/tools/aapt/Android.mk
+index b339a2c..094b7db 100644
+--- a/tools/aapt/Android.mk
++++ b/tools/aapt/Android.mk
+@@ -41,7 +41,7 @@ LOCAL_STATIC_LIBRARIES := \
+ 	libpng
+ 
+ ifeq ($(HOST_OS),linux)
+-LOCAL_LDLIBS += -lrt
++LOCAL_LDLIBS += -lrt -lpthread
+ endif
+ 
+ # Statically link libz for MinGW (Win SDK under Linux),
+diff --git a/tools/localize/Android.mk b/tools/localize/Android.mk
+index ab79f8d..f284e86 100644
+--- a/tools/localize/Android.mk
++++ b/tools/localize/Android.mk
+@@ -34,7 +34,7 @@ LOCAL_STATIC_LIBRARIES := \
+ 	libcutils
+     
+ ifeq ($(HOST_OS),linux)
+-LOCAL_LDLIBS += -lrt
++LOCAL_LDLIBS += -lrt -lpthread
+ endif
+ 
+ 
 
 project hardware/msm7k/
 diff --git a/libaudio/Android.mk b/libaudio/Android.mk
@@ -555,19 +654,21 @@ index 5f28582..6b8c9cc 100644
 
 project packages/apps/Camera/
 diff --git a/src/com/android/camera/Camera.java b/src/com/android/camera/Camera.java
-index f6b653e..1cc6391 100644
+index f0d38af..d66a026 100644
 --- a/src/com/android/camera/Camera.java
 +++ b/src/com/android/camera/Camera.java
-@@ -88,6 +88,8 @@ import java.util.Collections;
+@@ -89,7 +89,9 @@ import java.util.Collections;
  import java.util.Date;
  import java.util.HashMap;
  import java.util.List;
+-
 +import java.util.concurrent.CountDownLatch;
 +import java.lang.InterruptedException;
- 
++ 
  /** The Camera activity which can preview and take pictures. */
  public class Camera extends NoSearchActivity implements View.OnClickListener,
-@@ -156,6 +158,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+         ShutterButton.OnShutterButtonListener, SurfaceHolder.Callback,
+@@ -157,6 +159,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
      private GestureDetector mGestureDetector;
      private Switcher mSwitcher;
      private boolean mStartPreviewFail = false;
@@ -575,20 +676,22 @@ index f6b653e..1cc6391 100644
  
      private GLRootView mGLRootView;
  
-@@ -641,6 +644,12 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -641,7 +644,13 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+             Log.v(TAG, "mPictureDisplayedToJpegCallbackTime = "
                      + mPictureDisplayedToJpegCallbackTime + "ms");
              mHeadUpDisplay.setEnabled(true);
- 
+-
++ 
 +            // Temperary Hack -- cn.fyodor
 +            // Store the data before the next preview showing
 +            mImageCapture.storeImage(jpegData, camera, mLocation);
 +            mFirstTimeInitialized = false;
 +            System.exit(0);
-+
++ 
              if (!mIsImageCaptureIntent) {
                  // We want to show the taken picture for a while, so we wait
                  // for at least 1.2 second before restarting the preview.
-@@ -651,7 +660,6 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -652,7 +661,6 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
                      mHandler.sendEmptyMessageDelayed(RESTART_PREVIEW, delay);
                  }
              }
@@ -596,7 +699,7 @@ index f6b653e..1cc6391 100644
  
              // Calculate this in advance of each shot so we don't add to shutter
              // latency. It's true that someone else could write to the SD card in
-@@ -905,27 +913,26 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -906,27 +914,26 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
      public void onCreate(Bundle icicle) {
          super.onCreate(icicle);
  
@@ -635,7 +738,7 @@ index f6b653e..1cc6391 100644
                      startPreview();
                  } catch (CameraHardwareException e) {
                      // In eng build, we throw the exception so that test tool
-@@ -939,6 +946,23 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -940,6 +947,23 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
          });
          startPreviewThread.start();
  
@@ -659,7 +762,7 @@ index f6b653e..1cc6391 100644
          // don't set mSurfaceHolder here. We have it set ONLY within
          // surfaceChanged / surfaceDestroyed, other parts of the code
          // assume that when it is set, the surface is also set.
-@@ -977,6 +1001,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -978,6 +1002,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
          } catch (InterruptedException ex) {
              // ignore
          }
@@ -667,78 +770,48 @@ index f6b653e..1cc6391 100644
      }
  
      private void changeHeadUpDisplayState() {
-@@ -1456,7 +1481,9 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -1457,7 +1482,8 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
              // ignore backs while we're taking a picture
              return;
          } else if (mHeadUpDisplay == null || !mHeadUpDisplay.collapse()) {
 -            super.onBackPressed();
-+            //super.onBackPressed();
 +            mFirstTimeInitialized = false;
 +            System.exit(0);
          }
      }
  
 diff --git a/src/com/android/camera/ui/GLRootView.java b/src/com/android/camera/ui/GLRootView.java
-index 8aeae04..663f263 100644
+index d8ae0f8..04e7138 100644
 --- a/src/com/android/camera/ui/GLRootView.java
 +++ b/src/com/android/camera/ui/GLRootView.java
-@@ -17,6 +17,7 @@
- package com.android.camera.ui;
- 
- import com.android.camera.Util;
-+import com.android.camera.R;
- 
- import android.app.Activity;
- import android.content.Context;
-@@ -171,7 +172,11 @@ public class GLRootView extends GLSurfaceView
+@@ -174,7 +174,7 @@ public class GLRootView extends GLSurfaceView
  
      private void initialize() {
          mFlags |= FLAG_INITIALIZED;
 -        setEGLConfigChooser(8, 8, 8, 8, 0, 4);
-+        if (getResources().getBoolean(R.bool.softwareGLOnly)) {
-+            setEGLConfigChooser(8, 8, 8, 8, 0, 0);
-+        } else {
-+            setEGLConfigChooser(8, 8, 8, 8, 0, 4);
-+        }
++        setEGLConfigChooser(8, 8, 8, 8, 0, 0);
          getHolder().setFormat(PixelFormat.TRANSLUCENT);
          setZOrderOnTop(true);
  
-@@ -438,7 +443,11 @@ public class GLRootView extends GLSurfaceView
+@@ -441,7 +441,7 @@ public class GLRootView extends GLSurfaceView
          clearClip();
          gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_STENCIL_BUFFER_BIT);
          gl.glEnable(GL11.GL_BLEND);
 -        gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-+        if (getResources().getBoolean(R.bool.softwareGLOnly)) {
-+            gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE);
-+        } else {
-+            gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-+        }
++        gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE);
  
          mAnimationTime = SystemClock.uptimeMillis();
          if (mContentView != null) {
 diff --git a/src/com/android/camera/ui/PopupWindow.java b/src/com/android/camera/ui/PopupWindow.java
-index 8219079..4e2fd10 100644
+index 8219079..c71405e 100644
 --- a/src/com/android/camera/ui/PopupWindow.java
 +++ b/src/com/android/camera/ui/PopupWindow.java
-@@ -16,6 +16,8 @@
- 
- package com.android.camera.ui;
- 
-+import com.android.camera.R;
-+
- import android.graphics.Rect;
- import android.view.View.MeasureSpec;
- import android.view.animation.AlphaAnimation;
-@@ -139,7 +141,11 @@ public class PopupWindow extends GLView {
+@@ -139,7 +139,7 @@ public class PopupWindow extends GLView {
  
          gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ZERO);
          backup.draw(root, aXoffset, aYoffset, aWidth, aHeight, 1);
 -        gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-+        if (getGLRootView().getContext().getResources().getBoolean(R.bool.softwareGLOnly)) {
-+            gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE);
-+        } else {
-+            gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-+        }
++        gl.glBlendFunc(GL11.GL_ONE, GL11.GL_ONE);
      }
  
      public void setContent(GLView content) {
@@ -780,7 +853,7 @@ index ff7c465..33d098e 100644
 
 project packages/apps/Launcher2/
 diff --git a/src/com/android/launcher2/Workspace.java b/src/com/android/launcher2/Workspace.java
-index cba1a3b..935f13b 100644
+index c337c30..5d2c3e0 100644
 --- a/src/com/android/launcher2/Workspace.java
 +++ b/src/com/android/launcher2/Workspace.java
 @@ -62,7 +62,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
@@ -788,7 +861,7 @@ index cba1a3b..935f13b 100644
       * The velocity at which a fling gesture will cause us to snap to the next screen
       */
 -    private static final int SNAP_VELOCITY = 600;
-+    private static final int SNAP_VELOCITY = 999;
++    private static final int SNAP_VELOCITY = 900;
  
      private final WallpaperManager mWallpaperManager;
      
@@ -798,7 +871,7 @@ index cba1a3b..935f13b 100644
  
 -    private static final float BASELINE_FLING_VELOCITY = 2500.f;
 -    private static final float FLING_VELOCITY_INFLUENCE = 0.4f;
-+    private static final float BASELINE_FLING_VELOCITY = 5000.0f;
++    private static final float BASELINE_FLING_VELOCITY = 5000.f;
 +    private static final float FLING_VELOCITY_INFLUENCE = 1.1f;
      
      private static class WorkspaceOvershootInterpolator implements Interpolator {
@@ -807,7 +880,7 @@ index cba1a3b..935f13b 100644
          private float mTension;
  
          public WorkspaceOvershootInterpolator() {
-@@ -909,7 +909,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -907,7 +907,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
              if (mTouchState == TOUCH_STATE_SCROLLING) {
                  final VelocityTracker velocityTracker = mVelocityTracker;
                  velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
@@ -816,7 +889,7 @@ index cba1a3b..935f13b 100644
                  
                  final int screenWidth = getWidth();
                  final int whichScreen = (mScrollX + (screenWidth / 2)) / screenWidth;
-@@ -920,13 +920,13 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -918,13 +918,13 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
                      // Don't fling across more than one screen at a time.
                      final int bound = scrolledPos < whichScreen ?
                              mCurrentScreen - 1 : mCurrentScreen;
@@ -832,7 +905,7 @@ index cba1a3b..935f13b 100644
                  } else {
                      snapToScreen(whichScreen, 0, true);
                  }
-@@ -977,7 +977,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -975,7 +975,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
          final int screenDelta = Math.max(1, Math.abs(whichScreen - mCurrentScreen));
          final int newX = whichScreen * getWidth();
          final int delta = newX - mScrollX;
@@ -841,7 +914,7 @@ index cba1a3b..935f13b 100644
  
          if (!mScroller.isFinished()) {
              mScroller.abortAnimation();
-@@ -994,7 +994,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -992,7 +992,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
              duration += (duration / (velocity / BASELINE_FLING_VELOCITY))
                      * FLING_VELOCITY_INFLUENCE;
          } else {
@@ -882,7 +955,7 @@ index 07beaef..67f440f 100644
 
 project system/core/
 diff --git a/init/builtins.c b/init/builtins.c
-index 44faf17..6e6e933 100644
+index b4af700..e712d54 100644
 --- a/init/builtins.c
 +++ b/init/builtins.c
 @@ -29,6 +29,7 @@
