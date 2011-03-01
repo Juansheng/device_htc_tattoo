@@ -65,12 +65,7 @@ PRODUCT_PACKAGES += \
 	LiveWallpapersPicker \
 	sensors.bahamas
 
-PRODUCT_COPY_FILES := \
-	system/core/rootdir/etc/vold.fstab:system/etc/vold.fstab \
-	frameworks/base/data/sounds/effects/camera_click.ogg:system/media/audio/ui/camera_click.ogg \
-	frameworks/base/data/sounds/effects/VideoRecord.ogg:system/media/audio/ui/VideoRecord.ogg
-
-# libgps is necessary to complete the compilation
+# Libraries necessary to complete the compilation
 PRODUCT_COPY_FILES += \
     device/htc/tattoo/prebuilt/system/lib/libgps.so:obj/lib/libgps.so \
     device/htc/tattoo/prebuilt/system/etc/media_profiles.xml:system/etc/media_profiles.xml
@@ -127,21 +122,18 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/app/HTCCalibrate.apk:system/app/HTCCalibrate.apk \
 	device/htc/tattoo/prebuilt/system/bin/akm8973:system/bin/akm8973 \
 	device/htc/tattoo/prebuilt/system/bin/sysinit:system/bin/sysinit \
-	device/htc/tattoo/prebuilt/system/xbin/bash:system/xbin/bash \
-	device/htc/tattoo/prebuilt/system/xbin/nano:system/xbin/nano \
 	device/htc/tattoo/prebuilt/system/lib/modules/wlan.ko:system/lib/modules/wlan.ko \
 	device/htc/tattoo/prebuilt/system/lib/modules/ramzswap.ko:system/lib/modules/ramzswap.ko \
 	device/htc/tattoo/prebuilt/system/lib/modules/xvmalloc.ko:system/lib/modules/xvmalloc.ko
 
 # Media
 PRODUCT_COPY_FILES += \
-	device/htc/tattoo/prebuilt/system/media/audio/notifications/Teleport.mp3:system/media/audio/notifications/Teleport.mp3 \
+	system/core/rootdir/etc/vold.fstab:system/etc/vold.fstab \
 	device/htc/tattoo/prebuilt/system/media/bootanimation.zip:system/media/bootanimation.zip
 
 # Prebuilt libraries
 PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/lib/hw/sensors.bahamas.so:system/lib/hw/sensors.bahamas.so \
-	device/htc/tattoo/prebuilt/system/lib/libA2DP.so:system/lib/libA2DP.so \
 	device/htc/tattoo/prebuilt/system/lib/libaudioeq.so:system/lib/libaudioeq.so \
 	device/htc/tattoo/prebuilt/system/lib/libgps.so:system/lib/libgps.so \
 	device/htc/tattoo/prebuilt/system/lib/libhtc_acoustic.so:system/lib/libhtc_acoustic.so \
@@ -150,7 +142,6 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/lib/libmmcamera.so:system/lib/libmmcamera.so \
 	device/htc/tattoo/prebuilt/system/lib/libmmjpeg.so:system/lib/libmmjpeg.so \
 	device/htc/tattoo/prebuilt/system/lib/libmm-qcamera-tgt.so:system/lib/libmm-qcamera-tgt.so \
-	device/htc/tattoo/prebuilt/system/lib/libncurses.so:system/lib/libncurses.so \
 	device/htc/tattoo/prebuilt/system/lib/libOmxH264Dec.so:system/lib/libOmxH264Dec.so \
 	device/htc/tattoo/prebuilt/system/lib/libOmxMpeg4Dec.so:system/lib/libOmxMpeg4Dec.so \
 	device/htc/tattoo/prebuilt/system/lib/libOmxVidEnc.so:system/lib/libOmxVidEnc.so \

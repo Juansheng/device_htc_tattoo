@@ -27,8 +27,8 @@ PRODUCT_BRAND := Google
 PRODUCT_MODEL := Tattoo
 PRODUCT_MANUFACTURER := HTC
 
-PLATFORM_VERSION := 2.2
-BUILD_ID := froyo-plus-aosp
+PLATFORM_VERSION := 2.2.2_r1
+BUILD_ID := froyo
 
 PRODUCT_PACKAGE_OVERLAYS := device/htc/tattoo/overlay
 
@@ -37,8 +37,7 @@ PRODUCT_PACKAGES += Stk
 PRODUCT_PROPERTY_OVERRIDES += \
     keyguard.no_require_sim=true \
     ro.secure=0 \
-    ro.config.ringtone=BentleyDubs.ogg \
-    ro.config.notification_sound=Teleport.mp3
+    ro.config.ringtone=BentleyDubs.ogg
 
 # Pick up some sounds
 include frameworks/base/data/sounds/OriginalAudio.mk

@@ -40,9 +40,6 @@ BUILD_AOSP_SU := false
 # Busybox
 KERNEL_MODULES_DIR := /system/lib/modules
 
-# Stop compiling test_* binaries for eng tag
-STOP_TEST_BINS := true
-
 # Stagefright fully enabled
 BUILD_WITH_FULL_STAGEFRIGHT := true
 
@@ -51,8 +48,6 @@ BOARD_NO_PV_AUTHORING_CLOCK := true
 
 # Use QCOM libOmxCore.so
 BOARD_USES_QCOM_LIBS := true
-
-BOARD_NO_RGBX_8888 := true
 
 
 # Changed for Tattoo

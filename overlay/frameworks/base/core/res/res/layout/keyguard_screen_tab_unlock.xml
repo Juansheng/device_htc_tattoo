@@ -65,7 +65,7 @@
         android:layout_below="@id/carrier"
         android:layout_marginTop="26dip"
         android:layout_marginLeft="20dip"
-        android:paddingBottom="2dip"
+        android:paddingBottom="8dip"
         >
 
         <TextView android:id="@+id/timeDisplay"
@@ -79,7 +79,7 @@
             android:shadowDx="0"
             android:shadowDy="0"
             android:shadowRadius="3.0"
-            android:layout_marginBottom="8dip"
+            android:layout_marginBottom="2dip"
             />
 
 
@@ -149,7 +149,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:layout_marginBottom="40dip"
+        android:layout_marginBottom="54dip"
         />
 
     <!-- emergency call button shown when sim is PUKd and tab_selector is
