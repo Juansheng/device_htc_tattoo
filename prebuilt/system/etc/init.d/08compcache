@@ -1,8 +1,7 @@
 #!/system/bin/sh
 
 # - load compcache module
-insmod /system/lib/modules/xvmalloc.ko
-insmod /system/lib/modules/ramzswap.ko disksize_kb=18432  # 18M
+rzscontrol /dev/block/ramzswap0 --init
 busybox swapon /dev/block/ramzswap0
 
 exit 0
