@@ -60,10 +60,9 @@ PRODUCT_PACKAGES += \
 	SpareParts \
     GoogleContactsProvider
 
-# LiveWallpaper and sensors lib
+# LiveWallpaper
 PRODUCT_PACKAGES += \
-	LiveWallpapersPicker \
-	sensors.bahamas
+	LiveWallpapersPicker
 
 # Libraries necessary to complete the compilation
 PRODUCT_COPY_FILES += \
@@ -144,8 +143,6 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/lib/libOmxH264Dec.so:system/lib/libOmxH264Dec.so \
 	device/htc/tattoo/prebuilt/system/lib/libOmxMpeg4Dec.so:system/lib/libOmxMpeg4Dec.so \
 	device/htc/tattoo/prebuilt/system/lib/libOmxVidEnc.so:system/lib/libOmxVidEnc.so \
-	device/htc/tattoo/prebuilt/system/lib/libRS.so:system/lib/libRS.so \
-	device/htc/tattoo/prebuilt/system/lib/librs_jni.so:system/lib/librs_jni.so \
 	device/htc/tattoo/prebuilt/system/lib/libt9.so:system/lib/libt9.so
 
 # Ubuntu fonts

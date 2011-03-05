@@ -328,7 +328,6 @@ service bootanim /system/bin/bootanimation
     disabled
     oneshot
 
-# 666 for bts(BT+FM daemon) in future
 service dbus /system/bin/dbus-daemon --system --nofork
     socket dbus stream 666 bluetooth bluetooth
     user bluetooth
