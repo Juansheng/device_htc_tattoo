@@ -938,10 +938,12 @@ bool QualcommCameraHardware::initPreview()
 
         for (int cnt = 0; cnt < kPreviewBufferCount; cnt++) {
             frames[cnt].fd = mPreviewHeap->mHeap->getHeapID();
+            // vaddr were not changed within 4 frames in Donut dmesg
             frames[cnt].buffer =
                 (uint32_t)mPreviewHeap->mHeap->base();
-            frames[cnt].y_off = 153600; // 240x160
-            frames[cnt].cbcr_off = 192000; // 240x160
+            // y_off and cbcr_off confirmed in Donut(just for 240x160)
+            frames[cnt].y_off = 153600;
+            frames[cnt].cbcr_off = 192000;
             frames[cnt].path = MSM_FRAME_ENC;
 
             if (frames[cnt].buffer == 0) {
@@ -952,6 +954,8 @@ bool QualcommCameraHardware::initPreview()
             if (native_register_preview_bufs(mCameraControlFd,
                                              &mDimension,
                                              &frames[cnt],
+            // And even more, MSM_PMEM_OUTPUT2 with active status
+            // only could be found just 3 times.
                                              cnt == (kPreviewBufferCount-1) ? false : true))
                 LOGV("registerPreviewBuf: %d", cnt);
         }
@@ -964,12 +968,13 @@ bool QualcommCameraHardware::initPreview()
                                               &attr,
                                               frame_thread,
                                               &frames[kPreviewBufferCount-1]);
-        ret = mFrameThreadRunning;
-        if (ret)
+
+        iLog("mFrameThreadRunning after pthread_create: %d", mFrameThreadRunning);
+        if (mFrameThreadRunning)
             iLog("Preview thread created");
         mFrameThreadWaitLock.unlock();
     }
-    return ret;
+    return mFrameThreadRunning;
 }
 
 void QualcommCameraHardware::deinitPreview(void)
@@ -1955,7 +1960,7 @@ QualcommCameraHardware::PmemPool::PmemPool(const char *pmem_pool,
         iLog("pmem pool %s ioctl(PMEM_GET_SIZE) is %ld", pmem_pool, mSize.len);
 
         // Register buffers with the camera drivers.
-        if (num_buffers == 1) { // hack to exclude registering preview buffers
+        if (mPmemType != MSM_PMEM_OUTPUT2) {
             for (int cnt = 0; cnt < num_buffers; ++cnt) {
                 register_buf(mCameraControlFd,
                              buffer_size,
@@ -1978,7 +1983,7 @@ QualcommCameraHardware::PmemPool::~PmemPool()
     iLog("%s: %s E", __FUNCTION__, mName);
 
     // Unregister buffers with the camera drivers.
-    if (mNumBuffers == 1) {
+    if (mPmemType != MSM_PMEM_OUTPUT2) {
         for (int cnt = 0; cnt < mNumBuffers; ++cnt) {
             register_buf(mCameraControlFd,
                          mBufferSize,
@@ -2046,20 +2051,10 @@ static bool register_buf(int camfd,
 
     pmemBuf.type     = pmem_type;
     pmemBuf.fd       = pmempreviewfd;
-    // issues here, buf was not changed within 4 frames in Donut kernel log.
     pmemBuf.vaddr    = buf;
     pmemBuf.y_off    = 0;
-    // And even more, MSM_PMEM_OUTPUT2 with active(true) status only could be
-    // found just 3 times.
     pmemBuf.active   = active;
 
-    // confirmed in Donut kernel log
-#if 0
-    if (pmem_type == MSM_PMEM_OUTPUT2) {
-        pmemBuf.y_off = size * 2;
-        pmemBuf.cbcr_off = size * 5/2;
-    }
-#endif
     if (pmem_type == MSM_PMEM_RAW_MAINIMG) 
         pmemBuf.cbcr_off = 0;
     else 
