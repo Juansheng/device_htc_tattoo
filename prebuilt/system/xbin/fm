@@ -16,7 +16,7 @@ FREQFILE="/mnt/sdcard/FM.freq"
 
 usage()
 {
-    echo "Usage: fm [freq|vol|scan|n|p|off]"
+    echo "Usage: fm [freq|vol|scan|n|p|go|off]"
     echo ""
     echo "  freq"
     echo "      specify freq(kHz)($MINFREQ-$MAXFREQ)"
@@ -26,6 +26,8 @@ usage()
     echo "      scan avaiable frequencies"
     echo "   n/p"
     echo "      searching forward/backward"
+    echo "    go"
+    echo "      continue if being muted"
     echo "   off"
     echo "      tune off FM"
     echo ""
@@ -131,6 +133,32 @@ fm_on()
     echo "fm_headset" > /sys/class/htc_accessory/fm/flag
 }
 
+# FM status check
+fm_stat()
+{
+    echo "checking FM status..."
+    bttest is_enabled
+    [[ $? -eq 0 ]] && echo "FM is not running" && exit 1
+}
+
+# Force to enable BT
+bt_on()
+{
+    echo "Enabling bluetooth..."
+    bttest is_enabled
+    [[ $? -eq 0 ]] && bttest enable
+}
+
+# Check the input whether it is a number
+is_num()
+{
+    if [ `echo "$1" | sed 's/^[0-9][0-9]*$//' | wc -c` == 1 ]
+    then
+        return 1
+    else
+        return 0
+    fi
+}
 
 if [ x`busybox whoami` != x'root' ]
 then
@@ -162,9 +190,7 @@ else
     # scanning frequencies
     elif [ x"$ARG" == x"scan" ]
     then
-        echo "Reseting bluetooth..."
-        bttest is_enabled
-        [[ $? -eq 0 ]] && bttest enable
+        bt_on
 
         # FM_WRITE: CHANL_BW_SET: FM_CHANNEL_SPACING_100KHZ
         hcitool cmd 0x3f 0x135 0x38 0x02 0x00 0x00 0x02
@@ -206,9 +232,7 @@ else
     # one step to search forward or backward
     elif [ x"$ARG" == x"n" -o x"$ARG" == x"p" ]
     then
-        echo "Reseting bluetooth..."
-        bttest is_enabled
-        [[ $? -eq 0 ]] && echo "FM is not running" && exit 1
+        fm_stat
 
         # FM_WRITE: CHANL_BW_SET: FM_CHANNEL_SPACING_100KHZ
         hcitool cmd 0x3f 0x135 0x38 0x02 0x00 0x00 0x02
@@ -249,39 +273,47 @@ else
         echo ""
 
         exit 0
-    # set volume by percentage
-    elif [ ${ARG%.*} -le 100 -a ${ARG%.*} -ge 0 ]
+    # continue FM if being muted by other audio stuff
+    elif [ x"$ARG" == x"go" ]
     then
-        echo "Enabling bluetooth..."
-        bttest is_enabled
-        [[ $? -eq 1 ]] && vol_set $ARG
+        fm_stat
+
+        # re-routing to FM headset
+        snd_set_device 9
 
         exit 0
-    # FM power on and tune to the specifiled frequency
+    # set volume by percentage
     else
-        # check user input
-        if [ ${ARG%.*} -lt $MINFREQ -o ${ARG%.*} -gt $MAXFREQ ]
+        is_num "$ARG"
+        if [ $? == 1 ]
         then
-            echo "Range of Freqs: $MINFREQ-$MAXFREQ kHz"
-            echo ""
+            if [ ${ARG%.*} -ge 0 -a ${ARG%.*} -le 100 ]
+            then
+                fm_stat
+                vol_set $ARG
+
+                exit 0
+            # FM power on and tune to the specifiled frequency
+            elif [ ${ARG%.*} -ge $MINFREQ -a ${ARG%.*} -le $MAXFREQ ]
+            then
+                bt_on
+
+                # start FM
+                fm_on
+                # init default volume
+                vol_set $DEFAULTVOLUME
+                # set the frequency
+                freq_set $ARG
+
+                # routing to headset
+                snd_set_device 9  # 11 for speaker
+
+                echo ""
+                echo "All done, enjoy!"
+            fi
+        else
+            usage
             exit 1
         fi
-
-        echo "Reseting bluetooth..."
-        bttest is_enabled
-        [[ $? -eq 0 ]] && bttest enable
-
-        # start FM
-        fm_on
-        # init default volume
-        vol_set $DEFAULTVOLUME
-        # set the frequency
-        freq_set $ARG
-
-        # routing to headset
-        snd_set_device 9  # 11 for speaker
-
-        echo ""
-        echo "All done, enjoy!"
     fi
 fi
