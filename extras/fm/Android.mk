@@ -1,4 +1,4 @@
-# Copyright (C) 2011 The Android Open Source Project
+# Copyright (C) 2008 The Android Open Source Project
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-LOCAL_PATH := $(my-dir)
-subdir_makefiles := \
-	$(LOCAL_PATH)/extras/fm/Android.mk \
-	$(LOCAL_PATH)/extras/libcamera2/Android.mk \
-	$(LOCAL_PATH)/extras/qcom_mm-core/Android.mk \
-	$(LOCAL_PATH)/extras/su/Android.mk
 
-include $(subdir_makefiles)
+LOCAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+LOCAL_MODULE := snd_set_device
+LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_EXECUTABLES)
+LOCAL_MODULE_TAGS := eng
+LOCAL_SRC_FILES := snd_set_device.c
+include $(BUILD_EXECUTABLE)
+

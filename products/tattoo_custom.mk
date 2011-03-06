@@ -121,6 +121,7 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/app/HTCCalibrate.apk:system/app/HTCCalibrate.apk \
 	device/htc/tattoo/prebuilt/system/bin/akm8973:system/bin/akm8973 \
 	device/htc/tattoo/prebuilt/system/bin/sysinit:system/bin/sysinit \
+	device/htc/tattoo/prebuilt/system/xbin/fm:system/xbin/fm \
 	device/htc/tattoo/prebuilt/system/xbin/rzscontrol:system/xbin/rzscontrol \
 	device/htc/tattoo/prebuilt/system/lib/modules/wlan.ko:system/lib/modules/wlan.ko
 
