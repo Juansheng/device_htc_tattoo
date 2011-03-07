@@ -98,7 +98,6 @@ PRODUCT_COPY_FILES += \
     device/htc/tattoo/prebuilt/system/etc/init.d/08compcache:system/etc/init.d/08compcache \
     device/htc/tattoo/prebuilt/system/etc/init.d/20opt_and_fix:system/etc/init.d/20opt_and_fix \
     device/htc/tattoo/prebuilt/system/etc/init.d/80userinit:system/etc/init.d/80userinit \
-    device/htc/tattoo/prebuilt/system/etc/init.d/99complete:system/etc/init.d/99complete \
     device/htc/tattoo/prebuilt/system/etc/sysctl.conf:system/etc/sysctl.conf \
     device/htc/tattoo/prebuilt/system/etc/terminfo/l/linux:system/etc/terminfo/l/linux \
     device/htc/tattoo/prebuilt/system/etc/terminfo/u/unknown:system/etc/terminfo/u/unknown \
