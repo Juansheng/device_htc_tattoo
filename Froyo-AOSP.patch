@@ -552,6 +552,832 @@ index 79ee889..7760f92 100755
  
 
 project frameworks/base/
+diff --git a/api/current.xml b/api/current.xml
+index 9d259f3..5c7a657 100644
+--- a/api/current.xml
++++ b/api/current.xml
+@@ -84878,6 +84878,28 @@
+  visibility="public"
+ >
+ </field>
++<field name="FM_RX"
++ type="int"
++ transient="false"
++ volatile="false"
++ value="7"
++ static="true"
++ final="true"
++ deprecated="not deprecated"
++ visibility="public"
++>
++</field>
++<field name="FM_RX_A2DP"
++ type="int"
++ transient="false"
++ volatile="false"
++ value="8"
++ static="true"
++ final="true"
++ deprecated="not deprecated"
++ visibility="public"
++>
++</field>
+ <field name="MIC"
+  type="int"
+  transient="false"
+@@ -217753,7 +217775,7 @@
+ <method name="forkSystemServer"
+  return="int"
+  abstract="false"
+- native="true"
++ native="false"
+  synchronized="false"
+  static="true"
+  final="false"
+@@ -306680,7 +306702,7 @@
+  deprecated="not deprecated"
+  visibility="public"
+ >
+-<parameter name="toCopyIn" type="E[]">
++<parameter name="array" type="E[]">
+ </parameter>
+ </constructor>
+ <method name="add"
+@@ -306708,7 +306730,7 @@
+ >
+ <parameter name="index" type="int">
+ </parameter>
+-<parameter name="element" type="E">
++<parameter name="e" type="E">
+ </parameter>
+ </method>
+ <method name="addAll"
+@@ -306836,7 +306858,9 @@
+  deprecated="not deprecated"
+  visibility="public"
+ >
+-<parameter name="o" type="java.lang.Object">
++<parameter name="e" type="E">
++</parameter>
++<parameter name="index" type="int">
+ </parameter>
+ </method>
+ <method name="indexOf"
+@@ -306849,9 +306873,7 @@
+  deprecated="not deprecated"
+  visibility="public"
+ >
+-<parameter name="e" type="E">
+-</parameter>
+-<parameter name="index" type="int">
++<parameter name="o" type="java.lang.Object">
+ </parameter>
+ </method>
+ <method name="isEmpty"
+@@ -306886,7 +306908,9 @@
+  deprecated="not deprecated"
+  visibility="public"
+ >
+-<parameter name="o" type="java.lang.Object">
++<parameter name="e" type="E">
++</parameter>
++<parameter name="index" type="int">
+ </parameter>
+ </method>
+ <method name="lastIndexOf"
+@@ -306899,9 +306923,7 @@
+  deprecated="not deprecated"
+  visibility="public"
+ >
+-<parameter name="e" type="E">
+-</parameter>
+-<parameter name="index" type="int">
++<parameter name="o" type="java.lang.Object">
+ </parameter>
+ </method>
+ <method name="listIterator"
+@@ -306992,7 +307014,7 @@
+ >
+ <parameter name="index" type="int">
+ </parameter>
+-<parameter name="element" type="E">
++<parameter name="e" type="E">
+ </parameter>
+ </method>
+ <method name="size"
+diff --git a/core/jni/Android.mk b/core/jni/Android.mk
+index df1ab9e..ba8983d 100644
+--- a/core/jni/Android.mk
++++ b/core/jni/Android.mk
+@@ -131,6 +131,9 @@ LOCAL_SRC_FILES:= \
+ 	android_backup_FileBackupHelperBase.cpp \
+ 	android_backup_BackupHelperDispatcher.cpp
+ 
++# FM for Tattoo
++LOCAL_SRC_FILES += android_hardware_fm.cpp
++
+ LOCAL_C_INCLUDES += \
+ 	$(JNI_H_INCLUDE) \
+ 	$(LOCAL_PATH)/android/graphics \
+diff --git a/core/jni/AndroidRuntime.cpp b/core/jni/AndroidRuntime.cpp
+index d38d748..4ffffc2 100644
+--- a/core/jni/AndroidRuntime.cpp
++++ b/core/jni/AndroidRuntime.cpp
+@@ -88,6 +88,8 @@ extern int register_android_message_digest_sha1(JNIEnv *env);
+ 
+ extern int register_android_util_FloatMath(JNIEnv* env);
+ 
++extern int register_android_hardware_fm_fmradio(JNIEnv* env);
++
+ namespace android {
+ 
+ /*
+@@ -1262,6 +1264,7 @@ static const RegJNIRec gRegJNI[] = {
+     REG_JNI(register_android_os_MemoryFile),
+     REG_JNI(register_com_android_internal_os_ZygoteInit),
+     REG_JNI(register_android_hardware_Camera),
++    REG_JNI(register_android_hardware_fm_fmradio),
+     REG_JNI(register_android_hardware_SensorManager),
+     REG_JNI(register_android_media_AudioRecord),
+     REG_JNI(register_android_media_AudioSystem),
+diff --git a/include/media/AudioSystem.h b/include/media/AudioSystem.h
+index d0ccc50..1efa5e7 100644
+--- a/include/media/AudioSystem.h
++++ b/include/media/AudioSystem.h
+@@ -45,6 +45,7 @@ public:
+         ENFORCED_AUDIBLE = 7, // Sounds that cannot be muted by user and must be routed to speaker
+         DTMF             = 8,
+         TTS              = 9,
++        FM               = 10,
+         NUM_STREAM_TYPES
+     };
+ 
+@@ -221,6 +222,7 @@ public:
+         size_t* buffSize);
+ 
+     static status_t setVoiceVolume(float volume);
++    static status_t setFmVolume(float volume);
+ 
+     // return the number of audio frames written by AudioFlinger to audio HAL and
+     // audio dsp to DAC since the output on which the specificed stream is playing
+@@ -251,9 +253,10 @@ public:
+         DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES = 0x100,
+         DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER = 0x200,
+         DEVICE_OUT_AUX_DIGITAL = 0x400,
++        DEVICE_OUT_FM = 0x800,
+         DEVICE_OUT_DEFAULT = 0x8000,
+         DEVICE_OUT_ALL = (DEVICE_OUT_EARPIECE | DEVICE_OUT_SPEAKER | DEVICE_OUT_WIRED_HEADSET |
+-                DEVICE_OUT_WIRED_HEADPHONE | DEVICE_OUT_BLUETOOTH_SCO | DEVICE_OUT_BLUETOOTH_SCO_HEADSET |
++                DEVICE_OUT_WIRED_HEADPHONE | DEVICE_OUT_FM | DEVICE_OUT_BLUETOOTH_SCO | DEVICE_OUT_BLUETOOTH_SCO_HEADSET |
+                 DEVICE_OUT_BLUETOOTH_SCO_CARKIT | DEVICE_OUT_BLUETOOTH_A2DP | DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES |
+                 DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER | DEVICE_OUT_AUX_DIGITAL | DEVICE_OUT_DEFAULT),
+         DEVICE_OUT_ALL_A2DP = (DEVICE_OUT_BLUETOOTH_A2DP | DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES |
+@@ -268,11 +271,13 @@ public:
+         DEVICE_IN_AUX_DIGITAL = 0x200000,
+         DEVICE_IN_VOICE_CALL = 0x400000,
+         DEVICE_IN_BACK_MIC = 0x800000,
++        DEVICE_IN_FM_RX = 0x1000000,
++        DEVICE_IN_FM_RX_A2DP = 0x2000000,
+         DEVICE_IN_DEFAULT = 0x80000000,
+ 
+         DEVICE_IN_ALL = (DEVICE_IN_COMMUNICATION | DEVICE_IN_AMBIENT | DEVICE_IN_BUILTIN_MIC |
+                 DEVICE_IN_BLUETOOTH_SCO_HEADSET | DEVICE_IN_WIRED_HEADSET | DEVICE_IN_AUX_DIGITAL |
+-                DEVICE_IN_VOICE_CALL | DEVICE_IN_BACK_MIC | DEVICE_IN_DEFAULT)
++                DEVICE_IN_VOICE_CALL | DEVICE_IN_BACK_MIC | DEVICE_IN_FM_RX | DEVICE_IN_FM_RX_A2DP | DEVICE_IN_DEFAULT)
+     };
+ 
+     // device connection states used for setDeviceConnectionState()
+@@ -376,6 +381,7 @@ public:
+     static bool isOutputDevice(audio_devices device);
+     static bool isInputDevice(audio_devices device);
+     static bool isA2dpDevice(audio_devices device);
++    static bool isFmDevice(audio_devices device);
+     static bool isBluetoothScoDevice(audio_devices device);
+     static bool isLowVisibility(stream_type stream);
+     static bool isOutputChannel(uint32_t channel);
+@@ -454,6 +460,8 @@ public:
+     static const char *keyFormat;
+     static const char *keyChannels;
+     static const char *keyFrameCount;
++    static const char *keyFmOn;
++    static const char *keyFmOff;
+ 
+     String8 toString();
+ 
+diff --git a/include/media/IAudioFlinger.h b/include/media/IAudioFlinger.h
+index c147632..5f15377 100644
+--- a/include/media/IAudioFlinger.h
++++ b/include/media/IAudioFlinger.h
+@@ -134,6 +134,8 @@ public:
+     virtual status_t getRenderPosition(uint32_t *halFrames, uint32_t *dspFrames, int output) = 0;
+ 
+     virtual unsigned int  getInputFramesLost(int ioHandle) = 0;
++
++    virtual status_t setFmVolume(float volume) = 0;
+ };
+ 
+ 
+diff --git a/include/media/mediarecorder.h b/include/media/mediarecorder.h
+index 9ea6c7b..5c58fcf 100644
+--- a/include/media/mediarecorder.h
++++ b/include/media/mediarecorder.h
+@@ -44,7 +44,9 @@ enum audio_source {
+     AUDIO_SOURCE_VOICE_CALL = 4,
+     AUDIO_SOURCE_CAMCORDER = 5,
+     AUDIO_SOURCE_VOICE_RECOGNITION = 6,
+-    AUDIO_SOURCE_MAX = AUDIO_SOURCE_VOICE_RECOGNITION,
++    AUDIO_SOURCE_FM_RX = 7,
++    AUDIO_SOURCE_FM_RX_A2DP = 8,
++    AUDIO_SOURCE_MAX = AUDIO_SOURCE_FM_RX_A2DP,
+ 
+     AUDIO_SOURCE_LIST_END  // must be last - used to validate audio source type
+ };
+diff --git a/libs/audioflinger/A2dpAudioInterface.cpp b/libs/audioflinger/A2dpAudioInterface.cpp
+index 995e31c..e87927f 100644
+--- a/libs/audioflinger/A2dpAudioInterface.cpp
++++ b/libs/audioflinger/A2dpAudioInterface.cpp
+@@ -205,6 +205,11 @@ status_t A2dpAudioInterface::setVoiceVolume(float v)
+     return mHardwareInterface->setVoiceVolume(v);
+ }
+ 
++status_t A2dpAudioInterface::setFmVolume(float v)
++{
++    return mHardwareInterface->setFmVolume(v);
++}
++
+ status_t A2dpAudioInterface::setMasterVolume(float v)
+ {
+     return mHardwareInterface->setMasterVolume(v);
+diff --git a/libs/audioflinger/A2dpAudioInterface.h b/libs/audioflinger/A2dpAudioInterface.h
+index 48154f9..7084ac9 100644
+--- a/libs/audioflinger/A2dpAudioInterface.h
++++ b/libs/audioflinger/A2dpAudioInterface.h
+@@ -37,6 +37,7 @@ public:
+     virtual status_t    initCheck();
+ 
+     virtual status_t    setVoiceVolume(float volume);
++    virtual status_t    setFmVolume(float volume);
+     virtual status_t    setMasterVolume(float volume);
+ 
+     virtual status_t    setMode(int mode);
+diff --git a/libs/audioflinger/AudioDumpInterface.h b/libs/audioflinger/AudioDumpInterface.h
+index 4c62b3e..3ed1503 100644
+--- a/libs/audioflinger/AudioDumpInterface.h
++++ b/libs/audioflinger/AudioDumpInterface.h
+@@ -131,6 +131,8 @@ public:
+                             {return mFinalInterface->initCheck();}
+     virtual status_t    setVoiceVolume(float volume)
+                             {return mFinalInterface->setVoiceVolume(volume);}
++    virtual status_t    setFmVolume(float volume)
++                            {return mFinalInterface->setFmVolume(volume);}
+     virtual status_t    setMasterVolume(float volume)
+                             {return mFinalInterface->setMasterVolume(volume);}
+ 
+diff --git a/libs/audioflinger/AudioFlinger.cpp b/libs/audioflinger/AudioFlinger.cpp
+index 2414e8d..8c071c6 100644
+--- a/libs/audioflinger/AudioFlinger.cpp
++++ b/libs/audioflinger/AudioFlinger.cpp
+@@ -123,7 +123,7 @@ static bool settingsAllowed() {
+ 
+ AudioFlinger::AudioFlinger()
+     : BnAudioFlinger(),
+-        mAudioHardware(0), mMasterVolume(1.0f), mMasterMute(false), mNextThreadId(0)
++        mAudioHardware(0), mMasterVolume(1.0f), mMasterMute(false), mNextThreadId(0), mFmOn(false)
+ {
+     mHardwareStatus = AUDIO_HW_IDLE;
+ 
+@@ -568,6 +568,9 @@ bool AudioFlinger::isStreamActive(int stream) const
+             return true;
+         }
+     }
++    if (mFmOn && stream == AudioSystem::MUSIC) {
++        return true;
++    }
+     return false;
+ }
+ 
+@@ -603,6 +606,29 @@ status_t AudioFlinger::setParameters(int ioHandle, const String8& keyValuePairs)
+     }
+ #endif
+ 
++    AudioParameter param = AudioParameter(keyValuePairs);
++    String8 key = String8(AudioParameter::keyRouting);
++    int device;
++    if (param.getInt(key, device) == NO_ERROR) {
++        if((device & AudioSystem::DEVICE_OUT_FM) && mFmOn == false){
++            mFmOn = true;
++         } else if (mFmOn == true && !(device & AudioSystem::DEVICE_OUT_FM)){
++            mFmOn = false;
++         }
++    }
++
++    String8 fmOnKey = String8(AudioParameter::keyFmOn);
++    String8 fmOffKey = String8(AudioParameter::keyFmOff);
++    if (param.getInt(fmOnKey, device) == NO_ERROR) {
++        mFmOn = true;
++        // Call hardware to switch FM on/off
++        mAudioHardware->setParameters(keyValuePairs);
++    } else if (param.getInt(fmOffKey, device) == NO_ERROR) {
++        mFmOn = false;
++        // Call hardware to switch FM on/off
++        mAudioHardware->setParameters(keyValuePairs);
++    }
++
+     // ioHandle == 0 means the parameters are global to the audio hardware interface
+     if (ioHandle == 0) {
+         AutoMutex lock(mHardwareLock);
+@@ -696,6 +722,21 @@ status_t AudioFlinger::setVoiceVolume(float value)
+     return ret;
+ }
+ 
++status_t AudioFlinger::setFmVolume(float value)
++{
++    // check calling permissions
++    if (!settingsAllowed()) {
++        return PERMISSION_DENIED;
++    }
++
++    AutoMutex lock(mHardwareLock);
++    mHardwareStatus = AUDIO_SET_FM_VOLUME;
++    status_t ret = mAudioHardware->setFmVolume(value);
++    mHardwareStatus = AUDIO_HW_IDLE;
++
++    return ret;
++}
++
+ status_t AudioFlinger::getRenderPosition(uint32_t *halFrames, uint32_t *dspFrames, int output)
+ {
+     status_t status;
+diff --git a/libs/audioflinger/AudioFlinger.h b/libs/audioflinger/AudioFlinger.h
+index 739ec33..eea6810 100644
+--- a/libs/audioflinger/AudioFlinger.h
++++ b/libs/audioflinger/AudioFlinger.h
+@@ -137,6 +137,8 @@ public:
+ 
+     virtual status_t setVoiceVolume(float volume);
+ 
++    virtual status_t setFmVolume(float volume);
++
+     virtual status_t getRenderPosition(uint32_t *halFrames, uint32_t *dspFrames, int output);
+ 
+     // IBinder::DeathRecipient
+@@ -159,6 +161,7 @@ public:
+         AUDIO_HW_SET_MIC_MUTE,
+         AUDIO_SET_VOICE_VOLUME,
+         AUDIO_SET_PARAMETER,
++        AUDIO_SET_FM_VOLUME
+     };
+ 
+     // record interface
+@@ -798,6 +801,7 @@ private:
+ 
+                 SortedVector< sp<IBinder> >         mNotificationClients;
+                 int                                 mNextThreadId;
++                bool                                mFmOn;
+ };
+ 
+ // ----------------------------------------------------------------------------
+diff --git a/libs/audioflinger/AudioHardwareGeneric.cpp b/libs/audioflinger/AudioHardwareGeneric.cpp
+index d63c031..446994d 100644
+--- a/libs/audioflinger/AudioHardwareGeneric.cpp
++++ b/libs/audioflinger/AudioHardwareGeneric.cpp
+@@ -142,6 +142,12 @@ status_t AudioHardwareGeneric::setVoiceVolume(float v)
+     return NO_ERROR;
+ }
+ 
++status_t AudioHardwareGeneric::setFmVolume(float v)
++{
++    // Implement: set fm volume
++    return NO_ERROR;
++}
++
+ status_t AudioHardwareGeneric::setMasterVolume(float v)
+ {
+     // Implement: set master volume
+diff --git a/libs/audioflinger/AudioHardwareGeneric.h b/libs/audioflinger/AudioHardwareGeneric.h
+index aa4e78d..ef288b0 100644
+--- a/libs/audioflinger/AudioHardwareGeneric.h
++++ b/libs/audioflinger/AudioHardwareGeneric.h
+@@ -105,6 +105,7 @@ public:
+     virtual             ~AudioHardwareGeneric();
+     virtual status_t    initCheck();
+     virtual status_t    setVoiceVolume(float volume);
++    virtual status_t    setFmVolume(float volume);
+     virtual status_t    setMasterVolume(float volume);
+ 
+     // mic mute
+diff --git a/libs/audioflinger/AudioHardwareStub.cpp b/libs/audioflinger/AudioHardwareStub.cpp
+index d481150..f274d06 100644
+--- a/libs/audioflinger/AudioHardwareStub.cpp
++++ b/libs/audioflinger/AudioHardwareStub.cpp
+@@ -96,6 +96,11 @@ status_t AudioHardwareStub::setMasterVolume(float volume)
+     return NO_ERROR;
+ }
+ 
++status_t AudioHardwareStub::setFmVolume(float volume)
++{
++    return NO_ERROR;
++}
++
+ status_t AudioHardwareStub::dumpInternals(int fd, const Vector<String16>& args)
+ {
+     const size_t SIZE = 256;
+diff --git a/libs/audioflinger/AudioHardwareStub.h b/libs/audioflinger/AudioHardwareStub.h
+index 06a29de..6b947d5 100644
+--- a/libs/audioflinger/AudioHardwareStub.h
++++ b/libs/audioflinger/AudioHardwareStub.h
+@@ -67,6 +67,7 @@ public:
+     virtual             ~AudioHardwareStub();
+     virtual status_t    initCheck();
+     virtual status_t    setVoiceVolume(float volume);
++    virtual status_t    setFmVolume(float volume);
+     virtual status_t    setMasterVolume(float volume);
+ 
+     // mic mute
+diff --git a/libs/audioflinger/AudioPolicyManagerBase.cpp b/libs/audioflinger/AudioPolicyManagerBase.cpp
+index c8b3f48..85a9413 100644
+--- a/libs/audioflinger/AudioPolicyManagerBase.cpp
++++ b/libs/audioflinger/AudioPolicyManagerBase.cpp
+@@ -89,6 +89,13 @@ status_t AudioPolicyManagerBase::setDeviceConnectionState(AudioSystem::audio_dev
+ #endif
+                 }
+             }
++            if (AudioSystem::isFmDevice(device)) {
++                AudioOutputDescriptor *hwOutputDesc = mOutputs.valueFor(mHardwareOutput);
++                hwOutputDesc->mRefCount[AudioSystem::FM] = 1;
++                AudioParameter param = AudioParameter();
++                param.addInt(String8(AudioParameter::keyFmOn), mAvailableOutputDevices);
++                mpClientInterface->setParameters(mHardwareOutput, param.toString());
++            }
+             break;
+         // handle output device disconnection
+         case AudioSystem::DEVICE_STATE_UNAVAILABLE: {
+@@ -123,6 +130,13 @@ status_t AudioPolicyManagerBase::setDeviceConnectionState(AudioSystem::audio_dev
+ #endif
+                 }
+             }
++            if (AudioSystem::isFmDevice(device)) {
++                AudioOutputDescriptor *hwOutputDesc = mOutputs.valueFor(mHardwareOutput);
++                hwOutputDesc->mRefCount[AudioSystem::FM] = 0;
++                AudioParameter param = AudioParameter();
++                param.addInt(String8(AudioParameter::keyFmOff), mAvailableOutputDevices);
++                mpClientInterface->setParameters(mHardwareOutput, param.toString());
++            }
+             } break;
+ 
+         default:
+@@ -356,7 +370,8 @@ void AudioPolicyManagerBase::setForceUse(AudioSystem::force_use usage, AudioSyst
+         break;
+     case AudioSystem::FOR_MEDIA:
+         if (config != AudioSystem::FORCE_HEADPHONES && config != AudioSystem::FORCE_BT_A2DP &&
+-            config != AudioSystem::FORCE_WIRED_ACCESSORY && config != AudioSystem::FORCE_NONE) {
++            config != AudioSystem::FORCE_WIRED_ACCESSORY && config != AudioSystem::FORCE_SPEAKER &&
++            config != AudioSystem::FORCE_NONE) {
+             LOGW("setForceUse() invalid config %d for FOR_MEDIA", config);
+             return;
+         }
+@@ -1391,6 +1406,7 @@ AudioPolicyManagerBase::routing_strategy AudioPolicyManagerBase::getStrategy(Aud
+         // while key clicks are played produces a poor result
+     case AudioSystem::TTS:
+     case AudioSystem::MUSIC:
++    case AudioSystem::FM:
+         return STRATEGY_MEDIA;
+     }
+ }
+@@ -1487,7 +1503,13 @@ uint32_t AudioPolicyManagerBase::getDeviceForStrategy(routing_strategy strategy,
+         // FALL THROUGH
+ 
+     case STRATEGY_MEDIA: {
+-        uint32_t device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_AUX_DIGITAL;
++        uint32_t device2 = 0;
++        if (mForceUse[AudioSystem::FOR_MEDIA] == AudioSystem::FORCE_SPEAKER) {
++            device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_SPEAKER;
++        }
++        if (device2 == 0) {
++            device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_AUX_DIGITAL;
++        }
+         if (device2 == 0) {
+             device2 = mAvailableOutputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADPHONE;
+         }
+@@ -1713,7 +1735,7 @@ status_t AudioPolicyManagerBase::checkAndSetVolume(int stream, int index, audio_
+ 
+     float volume = computeVolume(stream, index, output, device);
+     // do not set volume if the float value did not change
+-    if (volume != mOutputs.valueFor(output)->mCurVolume[stream] || force) {
++    if (volume != mOutputs.valueFor(output)->mCurVolume[stream] || (stream == AudioSystem::FM) || force) {
+         mOutputs.valueFor(output)->mCurVolume[stream] = volume;
+         LOGV("setStreamVolume() for output %d stream %d, volume %f, delay %d", output, stream, volume, delayMs);
+         if (stream == AudioSystem::VOICE_CALL ||
+@@ -1731,6 +1753,13 @@ status_t AudioPolicyManagerBase::checkAndSetVolume(int stream, int index, audio_
+             if (voiceVolume >= 0 && output == mHardwareOutput) {
+                 mpClientInterface->setVoiceVolume(voiceVolume, delayMs);
+             }
++        } else if (stream == AudioSystem::FM) {
++            float fmVolume = -1.0;
++            fmVolume = computeVolume(stream, index, output, device);
++            if (fmVolume >= 0 && output == mHardwareOutput) {
++                mpClientInterface->setFmVolume(fmVolume, delayMs);
++            }
++            return NO_ERROR;
+         }
+         mpClientInterface->setStreamVolume((AudioSystem::stream_type)stream, volume, output, delayMs);
+     }
+diff --git a/libs/audioflinger/AudioPolicyService.cpp b/libs/audioflinger/AudioPolicyService.cpp
+index bb3905c..f98eea2 100644
+--- a/libs/audioflinger/AudioPolicyService.cpp
++++ b/libs/audioflinger/AudioPolicyService.cpp
+@@ -556,6 +556,11 @@ status_t AudioPolicyService::setVoiceVolume(float volume, int delayMs)
+     return mAudioCommandThread->voiceVolumeCommand(volume, delayMs);
+ }
+ 
++status_t AudioPolicyService::setFmVolume(float volume, int delayMs)
++{
++    return mAudioCommandThread->fmVolumeCommand(volume, delayMs);
++}
++
+ // -----------  AudioPolicyService::AudioCommandThread implementation ----------
+ 
+ AudioPolicyService::AudioCommandThread::AudioCommandThread(String8 name)
+@@ -651,6 +656,16 @@ bool AudioPolicyService::AudioCommandThread::threadLoop()
+                     }
+                     delete data;
+                     }break;
++                case SET_FM_VOLUME: {
++                    FmVolumeData *data = (FmVolumeData *)command->mParam;
++                    LOGV("AudioCommandThread() processing set fm volume volume %f", data->mVolume);
++                    command->mStatus = AudioSystem::setFmVolume(data->mVolume);
++                    if (command->mWaitStatus) {
++                        command->mCond.signal();
++                        mWaitWorkCV.wait(mLock);
++                    }
++                    delete data;
++                    }break;
+                 default:
+                     LOGW("AudioCommandThread() unknown command %d", command->mCommand);
+                 }
+@@ -815,6 +830,32 @@ status_t AudioPolicyService::AudioCommandThread::voiceVolumeCommand(float volume
+     return status;
+ }
+ 
++status_t AudioPolicyService::AudioCommandThread::fmVolumeCommand(float volume, int delayMs)
++{
++    status_t status = NO_ERROR;
++
++    AudioCommand *command = new AudioCommand();
++    command->mCommand = SET_FM_VOLUME;
++    FmVolumeData *data = new FmVolumeData();
++    data->mVolume = volume;
++    command->mParam = data;
++    if (delayMs == 0) {
++        command->mWaitStatus = true;
++    } else {
++        command->mWaitStatus = false;
++    }
++    Mutex::Autolock _l(mLock);
++    insertCommand_l(command, delayMs);
++    LOGV("AudioCommandThread() adding set fm volume volume %f", volume);
++    mWaitWorkCV.signal();
++    if (command->mWaitStatus) {
++        command->mCond.wait(mLock);
++        status =  command->mStatus;
++        mWaitWorkCV.signal();
++    }
++    return status;
++}
++
+ // insertCommand_l() must be called with mLock held
+ void AudioPolicyService::AudioCommandThread::insertCommand_l(AudioCommand *command, int delayMs)
+ {
+@@ -875,6 +916,9 @@ void AudioPolicyService::AudioCommandThread::insertCommand_l(AudioCommand *comma
+             LOGV("Filtering out volume command on output %d for stream %d", data->mIO, data->mStream);
+             removedCommands.add(command2);
+         } break;
++        case SET_FM_VOLUME: {
++            removedCommands.add(command2);
++        } break;
+         case START_TONE:
+         case STOP_TONE:
+         default:
+diff --git a/libs/audioflinger/AudioPolicyService.h b/libs/audioflinger/AudioPolicyService.h
+index a13d0bd..26454be 100644
+--- a/libs/audioflinger/AudioPolicyService.h
++++ b/libs/audioflinger/AudioPolicyService.h
+@@ -106,6 +106,7 @@ public:
+     virtual status_t startTone(ToneGenerator::tone_type tone, AudioSystem::stream_type stream);
+     virtual status_t stopTone();
+     virtual status_t setVoiceVolume(float volume, int delayMs = 0);
++    virtual status_t setFmVolume(float volume, int delayMs = 0);
+ 
+ private:
+                         AudioPolicyService();
+@@ -129,7 +130,8 @@ private:
+             STOP_TONE,
+             SET_VOLUME,
+             SET_PARAMETERS,
+-            SET_VOICE_VOLUME
++            SET_VOICE_VOLUME,
++            SET_FM_VOLUME
+         };
+ 
+         AudioCommandThread (String8 name);
+@@ -147,6 +149,7 @@ private:
+                     status_t    volumeCommand(int stream, float volume, int output, int delayMs = 0);
+                     status_t    parametersCommand(int ioHandle, const String8& keyValuePairs, int delayMs = 0);
+                     status_t    voiceVolumeCommand(float volume, int delayMs = 0);
++                    status_t    fmVolumeCommand(float volume, int delayMs = 0);
+                     void        insertCommand_l(AudioCommand *command, int delayMs = 0);
+ 
+     private:
+@@ -191,6 +194,11 @@ private:
+             float mVolume;
+         };
+ 
++        class FmVolumeData {
++        public:
++            float mVolume;
++        };
++
+         Mutex   mLock;
+         Condition mWaitWorkCV;
+         Vector <AudioCommand *> mAudioCommands; // list of pending commands
+diff --git a/media/java/android/media/AudioManager.java b/media/java/android/media/AudioManager.java
+index bbbba74..72d780b 100644
+--- a/media/java/android/media/AudioManager.java
++++ b/media/java/android/media/AudioManager.java
+@@ -178,7 +178,9 @@ public class AudioManager {
+         7,  // STREAM_BLUETOOTH_SCO
+         7,  // STREAM_SYSTEM_ENFORCED
+         11, // STREAM_DTMF
+-        11  // STREAM_TTS
++        11, // STREAM_TTS
++        11, // STREAM_FM
++
+     };
+ 
+     /**
+diff --git a/media/java/android/media/AudioService.java b/media/java/android/media/AudioService.java
+index 08fc782..06bd55c 100644
+--- a/media/java/android/media/AudioService.java
++++ b/media/java/android/media/AudioService.java
+@@ -162,7 +162,8 @@ public class AudioService extends IAudioService.Stub {
+         15, // STREAM_BLUETOOTH_SCO
+         7,  // STREAM_SYSTEM_ENFORCED
+         15, // STREAM_DTMF
+-        15  // STREAM_TTS
++        15, // STREAM_TTS
++        15, // STREAM_FM
+     };
+     /* STREAM_VOLUME_ALIAS[] indicates for each stream if it uses the volume settings
+      * of another stream: This avoids multiplying the volume settings for hidden
+@@ -178,7 +179,8 @@ public class AudioService extends IAudioService.Stub {
+         AudioSystem.STREAM_BLUETOOTH_SCO, // STREAM_BLUETOOTH_SCO
+         AudioSystem.STREAM_SYSTEM,  // STREAM_SYSTEM_ENFORCED
+         AudioSystem.STREAM_VOICE_CALL, // STREAM_DTMF
+-        AudioSystem.STREAM_MUSIC  // STREAM_TTS
++        AudioSystem.STREAM_MUSIC, // STREAM_TTS
++        AudioSystem.STREAM_MUSIC, // STREAM_FM
+     };
+ 
+     private AudioSystem.ErrorCallback mAudioSystemCallback = new AudioSystem.ErrorCallback() {
+diff --git a/media/java/android/media/AudioSystem.java b/media/java/android/media/AudioSystem.java
+index a4818ff..b91c505 100644
+--- a/media/java/android/media/AudioSystem.java
++++ b/media/java/android/media/AudioSystem.java
+@@ -51,13 +51,15 @@ public class AudioSystem
+     public static final int STREAM_DTMF = 8;
+     /* @hide The audio stream for text to speech (TTS) */
+     public static final int STREAM_TTS = 9;
++    /* @hide The audio stream for FM */
++    public static final int STREAM_FM = 10;
+     /**
+      * @deprecated Use {@link #numStreamTypes() instead}
+      */
+     public static final int NUM_STREAMS = 5;
+ 
+     // Expose only the getter method publicly so we can change it in the future
+-    private static final int NUM_STREAM_TYPES = 10;
++    private static final int NUM_STREAM_TYPES = 11;
+     public static final int getNumStreamTypes() { return NUM_STREAM_TYPES; }
+ 
+     /*
+@@ -243,6 +245,7 @@ public class AudioSystem
+     public static final int DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES = 0x100;
+     public static final int DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER = 0x200;
+     public static final int DEVICE_OUT_AUX_DIGITAL = 0x400;
++    public static final int DEVICE_OUT_FM = 0x800;
+     public static final int DEVICE_OUT_DEFAULT = 0x8000;
+     // input devices
+     public static final int DEVICE_IN_COMMUNICATION = 0x10000;
+@@ -253,6 +256,8 @@ public class AudioSystem
+     public static final int DEVICE_IN_BLUETOOTH_SCO_HEADSET = 0x200000;
+     public static final int DEVICE_IN_WIRED_HEADSET = 0x400000;
+     public static final int DEVICE_IN_AUX_DIGITAL = 0x800000;
++    public static final int DEVICe_IN_FM_RX = 0x1000000;
++    public static final int DEVICe_IN_FM_RXA2DP = 0x2000000;
+     public static final int DEVICE_IN_DEFAULT = 0x80000000;
+ 
+     // device states
+diff --git a/media/java/android/media/MediaRecorder.java b/media/java/android/media/MediaRecorder.java
+index 47a8cfc..90fb41c 100644
+--- a/media/java/android/media/MediaRecorder.java
++++ b/media/java/android/media/MediaRecorder.java
+@@ -145,6 +145,8 @@ public class MediaRecorder
+         /** Microphone audio source tuned for voice recognition if available, behaves like
+          *  {@link #DEFAULT} otherwise. */
+         public static final int VOICE_RECOGNITION = 6;
++        public static final int FM_RX = 7;
++        public static final int FM_RX_A2DP = 8;
+     }
+ 
+     /**
+diff --git a/media/libmedia/AudioSystem.cpp b/media/libmedia/AudioSystem.cpp
+index 5e6ce42..1e53408 100644
+--- a/media/libmedia/AudioSystem.cpp
++++ b/media/libmedia/AudioSystem.cpp
+@@ -364,6 +364,13 @@ unsigned int AudioSystem::getInputFramesLost(audio_io_handle_t ioHandle) {
+     return result;
+ }
+ 
++status_t AudioSystem::setFmVolume(float value)
++{
++    const sp<IAudioFlinger>& af = AudioSystem::get_audio_flinger();
++    if (af == 0) return PERMISSION_DENIED;
++    return af->setFmVolume(value);
++}
++
+ // ---------------------------------------------------------------------------
+ 
+ void AudioSystem::AudioFlingerClient::binderDied(const wp<IBinder>& who) {
+@@ -704,6 +711,16 @@ bool AudioSystem::isInputDevice(audio_devices device)
+     }
+ }
+ 
++bool AudioSystem::isFmDevice(audio_devices device)
++{
++    if ((popCount(device) == 1 ) &&
++        ((device & ~AudioSystem::DEVICE_OUT_FM) == 0)) {
++        return true;
++    } else {
++        return false;
++    }
++}
++
+ bool AudioSystem::isA2dpDevice(audio_devices device)
+ {
+     if ((popCount(device) == 1 ) &&
+@@ -792,6 +809,8 @@ const char *AudioParameter::keySamplingRate = "sampling_rate";
+ const char *AudioParameter::keyFormat = "format";
+ const char *AudioParameter::keyChannels = "channels";
+ const char *AudioParameter::keyFrameCount = "frame_count";
++const char *AudioParameter::keyFmOn = "fm_on";
++const char *AudioParameter::keyFmOff = "fm_off";
+ 
+ AudioParameter::AudioParameter(const String8& keyValuePairs)
+ {
+diff --git a/media/libmedia/IAudioFlinger.cpp b/media/libmedia/IAudioFlinger.cpp
+index 47bcc12..0eae766 100644
+--- a/media/libmedia/IAudioFlinger.cpp
++++ b/media/libmedia/IAudioFlinger.cpp
+@@ -62,7 +62,8 @@ enum {
+     SET_STREAM_OUTPUT,
+     SET_VOICE_VOLUME,
+     GET_RENDER_POSITION,
+-    GET_INPUT_FRAMES_LOST
++    GET_INPUT_FRAMES_LOST,
++    SET_FM_VOLUME
+ };
+ 
+ class BpAudioFlinger : public BpInterface<IAudioFlinger>
+@@ -497,6 +498,15 @@ public:
+         remote()->transact(GET_INPUT_FRAMES_LOST, data, &reply);
+         return reply.readInt32();
+     }
++
++    virtual status_t setFmVolume(float volume)
++    {
++        Parcel data, reply;
++        data.writeInterfaceToken(IAudioFlinger::getInterfaceDescriptor());
++        data.writeFloat(volume);
++        remote()->transact(SET_FM_VOLUME, data, &reply);
++        return reply.readInt32();
++    }
+ };
+ 
+ IMPLEMENT_META_INTERFACE(AudioFlinger, "android.media.IAudioFlinger");
+@@ -768,7 +778,12 @@ status_t BnAudioFlinger::onTransact(
+             reply->writeInt32(getInputFramesLost(ioHandle));
+             return NO_ERROR;
+         } break;
+-
++        case SET_FM_VOLUME: {
++            CHECK_INTERFACE(IAudioFlinger, data, reply);
++            float volume = data.readFloat();
++            reply->writeInt32( setFmVolume(volume) );
++            return NO_ERROR;
++        } break;
+         default:
+             return BBinder::onTransact(code, data, reply, flags);
+     }
 diff --git a/services/java/com/android/server/status/StatusBarPolicy.java b/services/java/com/android/server/status/StatusBarPolicy.java
 index 94d1cb4..9273271 100644
 --- a/services/java/com/android/server/status/StatusBarPolicy.java
@@ -637,6 +1463,36 @@ index ab79f8d..f284e86 100644
  
  
 
+project hardware/libhardware_legacy/
+diff --git a/include/hardware_legacy/AudioHardwareInterface.h b/include/hardware_legacy/AudioHardwareInterface.h
+index ba65d9a..766590e 100644
+--- a/include/hardware_legacy/AudioHardwareInterface.h
++++ b/include/hardware_legacy/AudioHardwareInterface.h
+@@ -240,6 +240,9 @@ public:
+     /**This method dumps the state of the audio hardware */
+     virtual status_t dumpState(int fd, const Vector<String16>& args) = 0;
+ 
++    /** set the fm volume. Range is between 0.0 and 1.0 */
++    virtual status_t setFmVolume(float volume) { return 0; }
++
+     static AudioHardwareInterface* create();
+ 
+ protected:
+diff --git a/include/hardware_legacy/AudioPolicyInterface.h b/include/hardware_legacy/AudioPolicyInterface.h
+index bd3c4b1..5cf8ff3 100644
+--- a/include/hardware_legacy/AudioPolicyInterface.h
++++ b/include/hardware_legacy/AudioPolicyInterface.h
+@@ -195,6 +195,9 @@ public:
+ 
+     // set down link audio volume.
+     virtual status_t setVoiceVolume(float volume, int delayMs = 0) = 0;
++
++    // set FM volume.
++    virtual status_t setFmVolume(float volume, int delayMs = 0) { return 0; }
+ };
+ 
+ extern "C" AudioPolicyInterface* createAudioPolicyManager(AudioPolicyClientInterface *clientInterface);
+
 project hardware/msm7k/
 diff --git a/libaudio/Android.mk b/libaudio/Android.mk
 index 5f28582..6b8c9cc 100644
@@ -651,6 +1507,140 @@ index 5f28582..6b8c9cc 100644
  LOCAL_MODULE := libaudio
  
  LOCAL_SHARED_LIBRARIES := \
+diff --git a/libaudio/AudioHardware.cpp b/libaudio/AudioHardware.cpp
+index 78b6a3e..fda2852 100644
+--- a/libaudio/AudioHardware.cpp
++++ b/libaudio/AudioHardware.cpp
+@@ -46,7 +46,7 @@ const uint32_t AudioHardware::inputSamplingRates[] = {
+ 
+ AudioHardware::AudioHardware() :
+     mInit(false), mMicMute(true), mBluetoothNrec(true), mBluetoothId(0),
+-    mOutput(0), mSndEndpoints(NULL), mCurSndDevice(-1),
++    mOutput(0), mSndEndpoints(NULL), mCurSndDevice(-1), mFmRadioEnabled(false),
+     SND_DEVICE_CURRENT(-1),
+     SND_DEVICE_HANDSET(-1),
+     SND_DEVICE_SPEAKER(-1),
+@@ -318,6 +318,15 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
+             doRouting();
+         }
+     }
++    key = String8(AudioParameter::keyFmOn);
++    int devices;
++    if (param.getInt(key, devices) == NO_ERROR) {
++       setFmOnOff(true);
++    }
++    key = String8(AudioParameter::keyFmOff);
++    if (param.getInt(key, devices) == NO_ERROR) {
++       setFmOnOff(false);
++    }
+     return NO_ERROR;
+ }
+ 
+@@ -432,6 +441,39 @@ status_t AudioHardware::setMasterVolume(float v)
+     return -1;
+ }
+ 
++/*
++ * This is a workaround to enable routing of analog audio to the headphones.
++ * There might be a cleaner way to do this.
++ */
++status_t AudioHardware::setFmOnOff(bool onoff)
++{
++    int ret;
++
++    if (onoff) {
++        mFmRadioEnabled = true;
++    } else {
++        mFmRadioEnabled = false;
++    }
++
++    return doRouting();
++}
++
++status_t AudioHardware::setFmVolume(float v)
++{
++    float ratio = 2.5;
++    int volume = (unsigned int)(AudioSystem::logToLinear(v) * ratio);
++
++    char volhex[10] = "";
++    sprintf(volhex, "0x%x ", volume);
++
++    char volreg[100] = "hcitool cmd 0x3f 0x135 0x1c 0x02 0x00 ";
++    strcat(volreg, volhex);
++    strcat(volreg, "0x00");
++    system(volreg);
++
++    return NO_ERROR;
++}
++
+ static status_t do_route_audio_rpc(uint32_t device,
+                                    bool ear_mute, bool mic_mute)
+ {
+@@ -558,15 +600,30 @@ status_t AudioHardware::doRouting()
+                 sndDevice = SND_DEVICE_HEADSET_AND_SPEAKER;
+                 audProcess = (ADRC_ENABLE | EQ_ENABLE | RX_IIR_ENABLE);
+             } else {
+-                LOGI("Routing audio to No microphone Wired Headset (%d,%x)\n", mMode, outputDevices);
+-                sndDevice = SND_DEVICE_NO_MIC_HEADSET;
++                if (mFmRadioEnabled) {
++                    LOGI("Routing FM audio to No microphone Wired Headset (%d,%x)\n", mMode, outputDevices);
++                    sndDevice = SND_DEVICE_FM_HEADSET;
++                } else {
++                    LOGI("Routing audio to No microphone Wired Headset (%d,%x)\n", mMode, outputDevices);
++                    sndDevice = SND_DEVICE_NO_MIC_HEADSET;
++                }
+             }
+         } else if (outputDevices & AudioSystem::DEVICE_OUT_WIRED_HEADSET) {
+-            LOGI("Routing audio to Wired Headset\n");
+-            sndDevice = SND_DEVICE_HEADSET;
++            if (mFmRadioEnabled) {
++                LOGI("Routing FM audio to Wired Headset\n");
++                sndDevice = SND_DEVICE_FM_HEADSET;
++            } else {
++                LOGI("Routing audio to Wired Headset\n");
++                sndDevice = SND_DEVICE_HEADSET;
++            }
+         } else if (outputDevices & AudioSystem::DEVICE_OUT_SPEAKER) {
+-            LOGI("Routing audio to Speakerphone\n");
+-            sndDevice = SND_DEVICE_SPEAKER;
++            if (mFmRadioEnabled) {
++                LOGI("Routing FM audio to Speakerphone\n");
++                sndDevice = SND_DEVICE_FM_SPEAKER;
++            } else {
++                LOGI("Routing audio to Speakerphone\n");
++                sndDevice = SND_DEVICE_SPEAKER;
++            }
+             audProcess = (ADRC_ENABLE | EQ_ENABLE | RX_IIR_ENABLE);
+         } else {
+             LOGI("Routing audio to Handset\n");
+diff --git a/libaudio/AudioHardware.h b/libaudio/AudioHardware.h
+index f68f249..2ce0a57 100644
+--- a/libaudio/AudioHardware.h
++++ b/libaudio/AudioHardware.h
+@@ -108,6 +108,7 @@ public:
+     virtual status_t    initCheck();
+ 
+     virtual status_t    setVoiceVolume(float volume);
++    virtual status_t    setFmVolume(float volume);
+     virtual status_t    setMasterVolume(float volume);
+ 
+     virtual status_t    setMode(int mode);
+@@ -154,6 +155,7 @@ private:
+     uint32_t    getInputSampleRate(uint32_t sampleRate);
+     bool        checkOutputStandby();
+     status_t    doRouting();
++    status_t    setFmOnOff(bool onoff);
+     AudioStreamInMSM72xx*   getActiveInput_l();
+ 
+     class AudioStreamOutMSM72xx : public AudioStreamOut {
+@@ -244,6 +246,7 @@ private:
+             msm_snd_endpoint *mSndEndpoints;
+             int mNumSndEndpoints;
+             int mCurSndDevice;
++            bool mFmRadioEnabled;
+ 
+      friend class AudioStreamInMSM72xx;
+             Mutex       mLock;
 
 project packages/apps/Camera/
 diff --git a/src/com/android/camera/Camera.java b/src/com/android/camera/Camera.java
