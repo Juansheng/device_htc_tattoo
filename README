@@ -14,7 +14,9 @@ Notes:
   - the patch from Cy to implement 'exec' command in init
   - the patch from Cy to make the headset icon visible
   - fixes of compilation error
-  - other optimizations
+  - FM implementation
+
+  NOTE: added source files are located at ./extras/absent directory.
 
 * Kernel had been applied with backported BFS-316 patch.
 
@@ -26,4 +28,3 @@ Notes:
 
 * Camera preview is not working right now.
 
-* FM hadn't been implemented yet.
