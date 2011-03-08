@@ -65,6 +65,10 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
 	LiveWallpapersPicker
 
+# sensors library
+PRODUCT_PACKAGES += \
+    sensors.msm7k
+
 # Libraries necessary to complete the compilation
 PRODUCT_COPY_FILES += \
     device/htc/tattoo/prebuilt/system/lib/libgps.so:obj/lib/libgps.so \
@@ -131,7 +135,6 @@ PRODUCT_COPY_FILES += \
 
 # Prebuilt libraries
 PRODUCT_COPY_FILES += \
-	device/htc/tattoo/prebuilt/system/lib/hw/sensors.bahamas.so:system/lib/hw/sensors.bahamas.so \
 	device/htc/tattoo/prebuilt/system/lib/libaudioeq.so:system/lib/libaudioeq.so \
 	device/htc/tattoo/prebuilt/system/lib/libgps.so:system/lib/libgps.so \
 	device/htc/tattoo/prebuilt/system/lib/libhtc_acoustic.so:system/lib/libhtc_acoustic.so \
@@ -145,6 +148,7 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/lib/libOmxVidEnc.so:system/lib/libOmxVidEnc.so \
 	device/htc/tattoo/prebuilt/system/lib/libt9.so:system/lib/libt9.so
 
+	#device/htc/tattoo/prebuilt/system/lib/hw/sensors.bahamas.so:system/lib/hw/sensors.bahamas.so \
 # Ubuntu fonts
 PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/fonts/DroidSans.ttf:system/fonts/DroidSans.ttf \
