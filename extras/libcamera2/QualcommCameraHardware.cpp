@@ -58,7 +58,7 @@ extern "C" {
 
 #include "msm_camera.h" // Tattoo kernel
 
-#define REVISION "0.2"
+#define REVISION "0.3"
 
 // init for Tattoo
 #define THUMBNAIL_WIDTH_STR   "192"
@@ -89,7 +89,9 @@ unsigned char (*LINK_jpeg_encoder_encode)(const char* file_name, const cam_ctrl_
                                   const unsigned char* thumbnailbuf, int thumbnailfd,
                                   const unsigned char* snapshotbuf, int snapshotfd,
                                   common_crop_t *cropInfo);
-int  (*LINK_camframe_terminate)(void);
+int  (*LINK_camframe_terminate)();
+void (*LINK_cam_set_frame_callback)();
+void (*LINK_cam_release_frame)();
 int8_t (*LINK_jpeg_encoder_setMainImageQuality)(uint32_t quality);
 int8_t (*LINK_jpeg_encoder_setThumbnailQuality)(uint32_t quality);
 int8_t (*LINK_jpeg_encoder_setRotation)(uint32_t rotation);
@@ -107,6 +109,8 @@ void  (**LINK_mmcamera_jpeg_callback)(jpeg_event_t status);
 #define LINK_jpeg_encoder_join jpeg_encoder_join
 #define LINK_jpeg_encoder_encode jpeg_encoder_encode
 #define LINK_camframe_terminate camframe_terminate
+#define LINK_cam_set_frame_callback cam_set_frame_callback
+#define LINK_cam_release_frame cam_release_frame
 #define LINK_jpeg_encoder_setMainImageQuality jpeg_encoder_setMainImageQuality
 #define LINK_jpeg_encoder_setThumbnailQuality jpeg_encoder_setThumbnailQuality
 #define LINK_jpeg_encoder_setRotation jpeg_encoder_setRotation
@@ -386,11 +390,16 @@ void QualcommCameraHardware::startCamera()
     *(void **)&LINK_jpeg_encoder_join =
         ::dlsym(libmmcamera, "jpeg_encoder_join");
 
-    // FIXME: mmframe_cb is just an object in libmmcamera.so
     *(void **)&LINK_mmcamera_camframe_callback =
         ::dlsym(libmmcamera, "mmframe_cb");
 
     *LINK_mmcamera_camframe_callback = receive_camframe_callback;
+
+    *(void **)&LINK_cam_set_frame_callback =
+        ::dlsym(libmmcamera, "cam_set_frame_callback");
+
+    *(void **)&LINK_cam_release_frame =
+        ::dlsym(libmmcamera, "cam_release_frame");
 
     *(void **)&LINK_mmcamera_jpegfragment_callback =
         ::dlsym(libmmcamera, "mm_jpegfragment_callback");
@@ -469,19 +478,7 @@ status_t QualcommCameraHardware::dump(int fd,
     return NO_ERROR;
 }
 
-static bool native_set_afmode(int camfd, isp3a_af_mode_t af_type)
-{
-    iLog("Fiesta doesn't have auto focus");
-    return true;
-}
-
-static bool native_cancel_afmode(int camfd, int af_fd)
-{
-    return true;
-}
-
-// interfaces confirmed
-void QualcommCameraHardware::reg_unreg_buf(int camfd,
+bool QualcommCameraHardware::reg_unreg_buf(int camfd,
                                            int width,
                                            int height,
                                            msm_frame_t *frame,
@@ -489,27 +486,34 @@ void QualcommCameraHardware::reg_unreg_buf(int camfd,
                                            unsigned char unregister,
                                            unsigned char active)
 {
+    uint32_t y_size;
     struct msm_pmem_info_t pmemBuf;
+    uint32_t ioctl_cmd;
+    int ioctlRetVal;
     
+    memset(&pmemBuf, 0, sizeof(pmemBuf));
+
     pmemBuf.type     = pmem_type;
     pmemBuf.fd       = frame->fd;
     pmemBuf.vaddr    = (unsigned long *)frame->buffer;
-    pmemBuf.y_off    = frame->y_off;
-    pmemBuf.cbcr_off = frame->cbcr_off;
+    pmemBuf.y_off    = (frame->y_off + 3) & ~3; // aligned to 4
+    pmemBuf.cbcr_off = (frame->cbcr_off + 3) & ~3;
     pmemBuf.active   = active;
 
-    iLog("Entered reg_unreg_buf: cbcr_off = %d, active= %d",
-         pmemBuf.cbcr_off, active);
-    if (ioctl(camfd,
-              unregister ? MSM_CAM_IOCTL_UNREGISTER_PMEM : MSM_CAM_IOCTL_REGISTER_PMEM,
-              &pmemBuf) < 0) {
-        LOGE("register_buf: MSM_CAM_IOCTL_(UN)REGISTER_PMEM fd %d error %s",
-             camfd,
-             strerror(errno));
+    ioctl_cmd = unregister ?
+                MSM_CAM_IOCTL_UNREGISTER_PMEM :
+                MSM_CAM_IOCTL_REGISTER_PMEM;
+
+    if ((ioctlRetVal = ioctl(camfd, ioctl_cmd, &pmemBuf)) < 0) {
+        LOGE("reg_unreg_buf: MSM_CAM_IOCTL_(UN)REGISTER_PMEM ioctl failed %d",
+            ioctlRetVal);
+        return false;
     }
+
+    return true;
 }
 
-bool QualcommCameraHardware::native_register_preview_bufs(
+void QualcommCameraHardware::native_register_preview_bufs(
     int camfd,
     void *pDim,
     struct msm_frame_t *frame,
@@ -524,11 +528,9 @@ bool QualcommCameraHardware::native_register_preview_bufs(
                   MSM_PMEM_OUTPUT2,
                   false,
                   active);
-
-    return true;
 }
 
-bool QualcommCameraHardware::native_unregister_preview_bufs(
+void QualcommCameraHardware::native_unregister_preview_bufs(
     int camfd,
     void *pDim,
     struct msm_frame_t *frame)
@@ -542,29 +544,35 @@ bool QualcommCameraHardware::native_unregister_preview_bufs(
                   MSM_PMEM_OUTPUT2,
                   true,
                   true);
+}
 
-    return true;
+static bool native_set_afmode(int camfd, isp3a_af_mode_t af_type)
+{
+    iLog("Click doesn't support auto focus mode");
+    return NO_ERROR;
+}
+
+// need to snapshot
+static bool native_cancel_afmode(int camfd, int af_fd)
+{
+    return NO_ERROR;
 }
 
 static bool native_start_preview(int camfd)
 {
-    int ioctlRetVal = 1;
-
     struct msm_ctrl_cmd_t ctrlCmd;
 
     ctrlCmd.timeout_ms = 5000;
     ctrlCmd.type       = CAMERA_START_PREVIEW;
     ctrlCmd.length     = 0;
+    ctrlCmd.value      = NULL;
 
-    ioctlRetVal = ioctl(camfd, MSM_CAM_IOCTL_CTRL_COMMAND, &ctrlCmd);
-    if (ioctlRetVal < 0) {
+    if (ioctl(camfd, MSM_CAM_IOCTL_CTRL_COMMAND, &ctrlCmd) < 0) {
         LOGE("native_start_preview: MSM_CAM_IOCTL_CTRL_COMMAND fd %d error %s",
              camfd,
              strerror(errno));
-        iLog("ioctl returned value %d", ioctlRetVal);
         return false;
     }
-    iLog("native_start_preview status after ioctl: %d", ctrlCmd.status);
 
     return true;
 }
@@ -781,6 +789,48 @@ void QualcommCameraHardware::jpeg_set_location()
     else iLog("not setting image location");
 }
 
+// simulate the cam_frame function in libmmcamera.so
+static void cam_frame_test(msm_frame_t *frame)
+{
+    iLog("Entering cam_frame_test");
+
+    struct timeval timeout;
+    fd_set readfds;
+    int ret;
+
+    int fd = open(MSM_CAMERA_CONTROL, O_RDWR);
+    if (fd < 0)
+        LOGE("cam_frame_test: cannot open %s: %s",
+             MSM_CAMERA_CONTROL, strerror(errno));
+
+    FD_ZERO(&readfds);
+    FD_SET(fd, &readfds);
+
+    // FIXME: must install signal by sigaction
+    while (true) {
+        timeout.tv_sec = 1; // guess
+        timeout.tv_usec = 0;
+
+        ret = select(fd+1, &readfds, NULL, NULL, &timeout);
+        if (ret == -1) {
+            LOGE("calling select failed!");
+            break;
+        } else if (FD_ISSET(fd, &readfds)) {
+            // ready to get frame
+            ret = ioctl(fd, MSM_CAM_IOCTL_GETFRAME, frame);
+            if (ret >= 0) {
+                // put buffers to config VFE
+                if (ioctl(fd, MSM_CAM_IOCTL_RELEASE_FRAMEE_BUFFER, frame) < 0)
+                    LOGE("MSM_CAM_IOCTL_RELEASE_FRAME_BUFFER error %s", strerror(errno));
+                else
+                    receive_camframe_callback(frame);
+            } else
+                LOGE("MSM_CAM_IOCTL_GETFRAME error %s", strerror(errno));
+        } else
+            usleep(100000);
+    }
+}
+
 void QualcommCameraHardware::runFrameThread(void *data)
 {
     iLog("runFrameThread E");
@@ -799,8 +849,8 @@ void QualcommCameraHardware::runFrameThread(void *data)
 #endif
     {
         iLog("Before LINK_cam_frame");
-        // confirmed
-        LINK_cam_frame(data);
+        //LINK_cam_frame(data);
+        cam_frame_test((msm_frame_t *)data);
         iLog("After LINK_cam_frame");
     }
 
@@ -918,65 +968,75 @@ bool QualcommCameraHardware::initPreview()
     }
     mSnapshotThreadWaitLock.unlock();
 
-    mDimension.picture_width  = DEFAULT_PICTURE_WIDTH;
+    mPreviewFrameSize = mPreviewWidth * mPreviewHeight * 3/2;
+    mPreviewHeap = new PreviewPmemPool(mCameraControlFd,
+                                       mPreviewWidth * mPreviewHeight * 2,
+                                       kPreviewBufferCount,
+                                       mPreviewFrameSize,
+                                       0,
+                                       "preview");
+
+    if (!mPreviewHeap->initialized()) {
+        mPreviewHeap.clear();
+        LOGE("initPreview X: could not initialize preview heap.");
+        return false;
+    }
+
+    mDimension.picture_width = DEFAULT_PICTURE_WIDTH;
     mDimension.picture_height = DEFAULT_PICTURE_HEIGHT;
 
-    bool ret = native_set_dimension(&mDimension);
+    unsigned char activeBuffer;
 
-    if (ret) {
-        mPreviewFrameSize = mPreviewWidth * mPreviewHeight * 3/2;
-        // PreviewPmemPool confirmed
-        mPreviewHeap = new PreviewPmemPool(mCameraControlFd,
-                                           mPreviewWidth * mPreviewHeight * 2,
-                                           kPreviewBufferCount,
-                                           mPreviewFrameSize,
-                                           0,
-                                           "preview");
-
-        if (!mPreviewHeap->initialized()) {
-            mPreviewHeap.clear();
-            LOGE("initPreview X: could not initialize preview heap.");
-            return false;
-        }
-
+    // (sizeof(mDimension) == 0x70) found in assembled codes
+    // element type was unsigned long?
+    if (native_set_dimension(&mDimension)) {
         for (int cnt = 0; cnt < kPreviewBufferCount; cnt++) {
             frames[cnt].fd = mPreviewHeap->mHeap->getHeapID();
-            // vaddr were not changed within 4 frames in Donut dmesg
-            frames[cnt].buffer =
-                (uint32_t)mPreviewHeap->mHeap->base();
+            // virtual addrs(buffer) of 4 frames wouldn't be changed in Donut dmesg
+            frames[cnt].buffer = (uint32_t)mPreviewHeap->mHeap->base();
             // y_off and cbcr_off confirmed in Donut(just for 240x160)
-            frames[cnt].y_off = 153600;
-            frames[cnt].cbcr_off = 192000;
-            frames[cnt].path = MSM_FRAME_ENC;
+            // math operations found in assembled codes
+            frames[cnt].y_off = cnt * (0x6400 << 1);
+            frames[cnt].cbcr_off = cnt * (0x6400 << 1) +
+                mDimension.display_width * mDimension.display_height;
 
             if (frames[cnt].buffer == 0) {
                 iLog("frames[%d].buffer: malloc failed!", cnt);
-                return 0;
+                return false;
             }
 
-            if (native_register_preview_bufs(mCameraControlFd,
-                                             &mDimension,
-                                             &frames[cnt],
-            // And even more, MSM_PMEM_OUTPUT2 with active status
-            // only could be found just 3 times.
-                                             cnt == (kPreviewBufferCount-1) ? false : true))
-                LOGV("registerPreviewBuf: %d", cnt);
+            frames[cnt].path = MSM_FRAME_ENC;
+
+            activeBuffer = (cnt != kPreviewBufferCount - 1) ? 1 : 0;
+
+            // returned type should be bool, confirmed from assembled codes
+            native_register_preview_bufs(mCameraControlFd,
+                                         &mDimension,
+                                         &frames[cnt],
+                                         activeBuffer);
+
+            if (cnt == kPreviewBufferCount - 1) {
+                iLog("set preview callback");
+                LINK_cam_set_frame_callback();
+
+                // TODO: memset(*s, 0, 0x14)
+
+                pthread_attr_t attr;
+                pthread_attr_init(&attr);
+                pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+                mFrameThreadRunning = !pthread_create(&mFrameThread,
+                                                      NULL, // confirmed
+                                                      frame_thread,
+                                                      &frames[cnt]);
+                if (mFrameThreadRunning)
+                    iLog("Preview thread created");
+                else
+                    LOGE("pthread_create error");
+            }
         }
+    } else
+        LOGE("native_set_dimension failed");
 
-        mFrameThreadWaitLock.lock();
-        pthread_attr_t attr;
-        pthread_attr_init(&attr);
-        pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-        mFrameThreadRunning = !pthread_create(&mFrameThread,
-                                              NULL,
-                                              frame_thread,
-                                              &frames[kPreviewBufferCount-1]);
-
-        iLog("mFrameThreadRunning after pthread_create: %d", mFrameThreadRunning);
-        if (mFrameThreadRunning)
-            iLog("Preview thread created");
-        mFrameThreadWaitLock.unlock();
-    }
     return mFrameThreadRunning;
 }
 
@@ -1167,10 +1227,9 @@ void QualcommCameraHardware::release()
 
     // Unregister preview buffer
     for (int cnt = 0; cnt < kPreviewBufferCount; ++cnt) {
-        if (native_unregister_preview_bufs(mCameraControlFd,
+        native_unregister_preview_bufs(mCameraControlFd,
                                            &mDimension,
-                                           &frames[cnt]))
-            LOGV("unregisterPreviewBuf %d", cnt);
+                                           &frames[cnt]);
     }
 
     mPreviewHeap = NULL;
@@ -1348,8 +1407,7 @@ void QualcommCameraHardware::runAutoFocus()
 
 status_t QualcommCameraHardware::cancelAutoFocus()
 {
-    native_cancel_afmode(mCameraControlFd, mAutoFocusFd);
-
+    native_cancel_afmode(camerafd, mAutoFocusFd);
     /* Needed for eclair camera PAI */
     return NO_ERROR;
 }
@@ -1646,6 +1704,8 @@ void QualcommCameraHardware::receivePreviewFrame(struct msm_frame_t *frame)
         (ssize_t)frame->buffer - (ssize_t)mPreviewHeap->mHeap->base();
     offset /= mPreviewFrameSize;
 
+    iLog("offset: %d", (int)offset);
+
     mInPreviewCallback = true;
     if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME)
         mDataCb(CAMERA_MSG_PREVIEW_FRAME, mPreviewHeap->mBuffers[offset], mCallbackCookie);
@@ -1714,6 +1774,7 @@ void QualcommCameraHardware::releaseRecordingFrame(
 
 bool QualcommCameraHardware::recordingEnabled()
 {
+    iLog("recordingEnabled");
     return (mCameraRunning && mCameraRecording);
 }
 
@@ -1739,8 +1800,6 @@ void QualcommCameraHardware::receiveRawPicture()
             LOGE("getPicture failed!");
             return;
         }
-
-        // By the time native_get_picture returns, picture is taken. Call
         mDataCb(CAMERA_MSG_RAW_IMAGE, mRawHeap->mBuffers[0], mCallbackCookie);
     }
     else iLog("Raw-picture callback was canceled--skipping.");

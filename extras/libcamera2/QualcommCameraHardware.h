@@ -189,18 +189,18 @@ private:
     void stopPreviewInternal();
     friend void *auto_focus_thread(void *user);
     void runAutoFocus();
-    void reg_unreg_buf(int camfd,
+    bool reg_unreg_buf(int camfd,
                        int width,
                        int height,
                        msm_frame_t *frame,
                        msm_pmem_t pmem_type,
                        unsigned char unregister,
                        unsigned char active);
-    bool native_register_preview_bufs(int camfd,
+    void native_register_preview_bufs(int camfd,
                                       void *pDim,
                                       struct msm_frame_t *frame,
                                       unsigned char active);
-    bool native_unregister_preview_bufs(int camfd,
+    void native_unregister_preview_bufs(int camfd,
                                         void *pDim,
                                         struct msm_frame_t *frame);
     bool native_set_dimension (int camfd);
