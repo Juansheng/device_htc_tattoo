@@ -215,7 +215,7 @@ private:
        for preview and raw, and need to be updated when libmmcamera
        changes.
     */
-    static const int kPreviewBufferCount = 4;
+    static const int kPreviewBufferCount = 2;
     static const int kRawBufferCount = 1;
     static const int kJpegBufferCount = 1;
     static const int kRawFrameHeaderSize = 0;
