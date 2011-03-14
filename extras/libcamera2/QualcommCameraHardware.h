@@ -176,19 +176,6 @@ public:
     static sp<CameraHardwareInterface> createInstance();
     static sp<QualcommCameraHardware> getInstance();
 
-    void receivePreviewFrame(struct msm_frame_t *frame);
-    void receiveJpegPicture(void);
-    void jpeg_set_location();
-    void receiveJpegPictureFragment(uint8_t *buf, uint32_t size);
-    void notifyShutter();
-
-private:
-    QualcommCameraHardware();
-    virtual ~QualcommCameraHardware();
-    status_t startPreviewInternal();
-    void stopPreviewInternal();
-    friend void *auto_focus_thread(void *user);
-    void runAutoFocus();
     bool reg_unreg_buf(int camfd,
                        int width,
                        int height,
@@ -203,6 +190,20 @@ private:
     void native_unregister_preview_bufs(int camfd,
                                         void *pDim,
                                         struct msm_frame_t *frame);
+
+    void receivePreviewFrame(struct msm_frame_t *frame);
+    void receiveJpegPicture(void);
+    void jpeg_set_location();
+    void receiveJpegPictureFragment(uint8_t *buf, uint32_t size);
+    void notifyShutter();
+
+private:
+    QualcommCameraHardware();
+    virtual ~QualcommCameraHardware();
+    status_t startPreviewInternal();
+    void stopPreviewInternal();
+    friend void *auto_focus_thread(void *user);
+    void runAutoFocus();
     bool native_set_dimension (int camfd);
     bool native_jpeg_encode (void);
     bool native_set_parm(cam_ctrl_type type, uint16_t length, void *value);

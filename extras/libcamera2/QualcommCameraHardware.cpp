@@ -230,6 +230,7 @@ static void receive_jpeg_fragment_callback(uint8_t *buff_ptr, uint32_t buff_size
 static void receive_jpeg_callback(jpeg_event_t status);
 
 static int camerafd;
+static int fd_frame;
 pthread_t w_thread;
 pthread_t jpegThread;
 
@@ -357,7 +358,7 @@ bool QualcommCameraHardware::msgTypeEnabled(int32_t msgType)
 
 void QualcommCameraHardware::startCamera()
 {
-    LOGV("startCamera E");
+    iLog("startCamera E");
 
 #if DLOPEN_LIBMMCAMERA
     libmmcamera = ::dlopen("libmmcamera.so", RTLD_NOW);
@@ -433,14 +434,22 @@ void QualcommCameraHardware::startCamera()
 
     mCameraControlFd = camerafd;
 
+    // maitain a fd for select() later
+    fd_frame = open(MSM_CAMERA_CONTROL, O_RDWR);
+    if (fd_frame < 0)
+        LOGE("cam_frame_click: cannot open %s: %s",
+             MSM_CAMERA_CONTROL, strerror(errno));
+
     if (!LINK_jpeg_encoder_init()) {
         LOGE("jpeg_encoding_init failed.");
     }
 
     if ((pthread_create(&mCamConfigThread, NULL, LINK_cam_conf, NULL)) != 0)
         LOGE("Config thread creation failed!");
+    else
+        iLog("Config thread created successfully");
 
-    LOGV("startCamera X");
+    iLog("startCamera X");
 }
 
 status_t QualcommCameraHardware::dump(int fd,
@@ -680,6 +689,7 @@ void *jpeg_encoder_thread( void *user )
     return NULL;
 }
 
+static bool mJpegThreadRunning = false;
 bool QualcommCameraHardware::native_jpeg_encode(void)
 {
     int jpeg_quality = mParameters.getInt("jpeg-quality");
@@ -708,14 +718,12 @@ bool QualcommCameraHardware::native_jpeg_encode(void)
     mDimension.filler7 = 2560;
     mDimension.filler8 = 1920;
 
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-
     int ret = !pthread_create(&jpegThread,
-                              &attr, //NULL, 
+                              NULL,
                               jpeg_encoder_thread,
                               NULL);
+    if (ret)
+        mJpegThreadRunning = true;
 
     return true;
 }
@@ -796,56 +804,63 @@ static void handler(int sig, siginfo_t *siginfo, void *context)
 }
 
 // customized cam_frame function based on reassembled libmmcamera.so
-static void cam_frame_click(msm_frame_t *frame)
+static void *cam_frame_click(void *data)
 {
     iLog("Entering cam_frame_click");
 
+    struct msm_frame_t *frame = (msm_frame_t *)data;
+
     struct sigaction act;
 
+    pthread_mutex_t mutex_camframe = PTHREAD_MUTEX_INITIALIZER;
     struct timeval timeout;
     fd_set readfds;
     int ret;
 
-    memset(&act, 0, sizeof(act));
+    // found in assembled codes of all libmmcamera
+    memset(&readfds, 0, sizeof(readfds));
+
     act.sa_sigaction = &handler;
     act.sa_flags = SA_SIGINFO;
-    if (sigaction(SIGUSR1, &act, NULL) < 0) {
+    if (sigaction(SIGUSR1, &act, NULL) != 0) {
         LOGE("sigaction in cam_frame failed");
-        return;
+        pthread_exit(NULL);
     }
 
-    int fd = open(MSM_CAMERA_CONTROL, O_RDWR);
-    if (fd < 0)
-        LOGE("cam_frame_click: cannot open %s: %s",
-             MSM_CAMERA_CONTROL, strerror(errno));
-
     FD_ZERO(&readfds);
-    FD_SET(fd, &readfds);
+    FD_SET(fd_frame, &readfds);
 
     while (true) {
         timeout.tv_sec = 1; // guess
         timeout.tv_usec = 0;
 
-        ret = select(fd+1, &readfds, NULL, NULL, &timeout);
+        ret = select(fd_frame+1, &readfds, NULL, NULL, &timeout);
         if (ret == -1) {
             LOGE("calling select failed!");
             break;
-        } else if (FD_ISSET(fd, &readfds)) {
+        } else if (FD_ISSET(fd_frame, &readfds)) {
+            pthread_mutex_lock(&mutex_camframe);
             // ready to get frame
-            ret = ioctl(fd, MSM_CAM_IOCTL_GETFRAME, frame);
+            ret = ioctl(fd_frame, MSM_CAM_IOCTL_GETFRAME, frame);
             if (ret >= 0) {
                 // put buffers to config VFE
-                if (ioctl(fd, MSM_CAM_IOCTL_RELEASE_FRAMEE_BUFFER, frame) < 0)
+                if (ioctl(fd_frame, MSM_CAM_IOCTL_RELEASE_FRAMEE_BUFFER, frame) < 0)
                     LOGE("MSM_CAM_IOCTL_RELEASE_FRAME_BUFFER error %s", strerror(errno));
                 else
                     receive_camframe_callback(frame);
             } else
                 LOGE("MSM_CAM_IOCTL_GETFRAME error %s", strerror(errno));
-        } else
+            pthread_mutex_unlock(&mutex_camframe);
+        } else {
+            iLog("frame is not ready! select returns %d", ret);
             usleep(100000);
+        }
     }
+
+    return NULL;
 }
 
+#if 0
 void QualcommCameraHardware::runFrameThread(void *data)
 {
     iLog("runFrameThread E");
@@ -863,9 +878,7 @@ void QualcommCameraHardware::runFrameThread(void *data)
     if (libhandle)
 #endif
     {
-        iLog("Before cam_frame_click");
         cam_frame_click((msm_frame_t *)data);
-        iLog("After cam_frame_click");
     }
 
 #if DLOPEN_LIBMMCAMERA
@@ -894,6 +907,7 @@ void *frame_thread(void *user)
     iLog("frame_thread X");
     return NULL;
 }
+#endif
 
 void QualcommCameraHardware::runJpegEncodeThread(void *data)
 {
@@ -1037,7 +1051,7 @@ bool QualcommCameraHardware::initPreview()
 
                 mFrameThreadRunning = !pthread_create(&mFrameThread,
                                                       NULL,
-                                                      frame_thread,
+                                                      cam_frame_click, //frame_thread,
                                                       &frames[cnt]);
                 if (mFrameThreadRunning)
                     iLog("Preview thread created");
@@ -1080,7 +1094,7 @@ void QualcommCameraHardware::deinitPreview(void)
             LOGE("frame_thread doesn't exist");
     }
 
-    iLog("Unregister buffers");
+    iLog("Unregister preview buffers");
     for (int cnt = 0; cnt < kPreviewBufferCount; ++cnt) {
         native_unregister_preview_bufs(mCameraControlFd,
                                        &mDimension,
@@ -1246,27 +1260,20 @@ void QualcommCameraHardware::release()
     if (rc)
         LOGE("config_thread exit failure: %s", strerror(errno));
  
-    iLog("Stopping the jpeg thread");
-    rc = pthread_join(jpegThread, NULL);
-    if (rc)
-        LOGE("jpeg_thread exit failure: %s", strerror(errno));
-
-#if 0
-    // Unregister preview buffer
-    if (mPreviewHeap != NULL) {
-        for (int cnt = 0; cnt < kPreviewBufferCount; ++cnt) {
-            native_unregister_preview_bufs(mCameraControlFd,
-                                           &mDimension,
-                                           &frames[cnt]);
-        }
+    if (mJpegThreadRunning) {
+        iLog("Stopping the jpeg thread");
+        rc = pthread_join(jpegThread, NULL);
+        if (rc)
+            LOGE("jpeg_thread exit failure: %s", strerror(errno));
     }
-#endif
 
-    mPreviewHeap = NULL;
     memset(&mDimension, 0, sizeof(mDimension));
 
     close(mCameraControlFd);
     mCameraControlFd = -1;
+
+    close(fd_frame);
+    fd_frame = -1;
 
 #if DLOPEN_LIBMMCAMERA
     if (libmmcamera) {
@@ -1281,7 +1288,7 @@ void QualcommCameraHardware::release()
     }
 #endif
 
-    // why ~QualcommCameraHardware() not called
+    // why ~QualcommCameraHardware() not called --> fixed!
     Mutex::Autolock lock(&singleton_lock);
     singleton_releasing = true;
 
@@ -1374,7 +1381,8 @@ void QualcommCameraHardware::stopPreview()
     if(mMsgEnabled & CAMERA_MSG_VIDEO_FRAME)
         return;
 
-    stopPreviewInternal();
+    if (mCameraRunning)
+        stopPreviewInternal();
 
     iLog("stopPreview: X");
 }
@@ -1520,9 +1528,10 @@ status_t QualcommCameraHardware::takePicture()
         iLog("takePicture: old snapshot thread completed.");
     }
 
-    stopPreviewInternal();
+    if (mCameraRunning)
+        stopPreviewInternal();
 
-    if (!initRaw(mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE)) { /* not sure if this is right */
+    if (!initRaw(mMsgEnabled & CAMERA_MSG_COMPRESSED_IMAGE)) {
         LOGE("initRaw failed. Not taking picture.");
         return UNKNOWN_ERROR;
     }
@@ -1779,7 +1788,8 @@ void QualcommCameraHardware::stopRecording()
         }
     }
 
-    stopPreviewInternal();
+    if (mCameraRunning)
+        stopPreviewInternal();
     iLog("stopRecording: X");
 }
 
