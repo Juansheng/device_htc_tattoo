@@ -525,32 +525,6 @@ index cbf94cf..c483441 100644
              public boolean setComposingText(CharSequence text, int newCursorPosition) {
                  return true;
 
-project external/stlport/
-diff --git a/Android.mk b/Android.mk
-index 79ee889..7760f92 100755
---- a/Android.mk
-+++ b/Android.mk
-@@ -51,9 +51,6 @@ LOCAL_MODULE := libstlport
- LOCAL_CFLAGS := $(libstlport_cflags)
- LOCAL_CPPFLAGS := $(libstlport_cppflags)
- 
--LOCAL_NDK_VERSION := 4
--LOCAL_SDK_VERSION := 8
--
- include $(LOCAL_PATH)/libstlport.mk
- include $(BUILD_SHARED_LIBRARY)
- 
-@@ -67,9 +64,6 @@ LOCAL_MODULE := libstlport_static
- LOCAL_CFLAGS := $(libstlport_cflags)
- LOCAL_CPPFLAGS := $(libstlport_cppflags)
- 
--LOCAL_NDK_VERSION := 4
--LOCAL_SDK_VERSION := 8
--
- include $(LOCAL_PATH)/libstlport.mk
- include $(BUILD_STATIC_LIBRARY)
- 
-
 project frameworks/base/
 diff --git a/api/current.xml b/api/current.xml
 index 9d259f3..5c7a657 100644
@@ -1200,6 +1174,64 @@ index a13d0bd..26454be 100644
          Mutex   mLock;
          Condition mWaitWorkCV;
          Vector <AudioCommand *> mAudioCommands; // list of pending commands
+diff --git a/location/java/com/android/internal/location/GpsLocationProvider.java b/location/java/com/android/internal/location/GpsLocationProvider.java
+index 15d692c..d44be7e 100755
+--- a/location/java/com/android/internal/location/GpsLocationProvider.java
++++ b/location/java/com/android/internal/location/GpsLocationProvider.java
+@@ -199,7 +199,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
+     // flags to trigger NTP or XTRA data download when network becomes available
+     // initialized to true so we do NTP and XTRA when the network comes up after booting
+     private boolean mInjectNtpTimePending = true;
+-    private boolean mDownloadXtraDataPending = true;
++    private boolean mDownloadXtraDataPending = false;
+ 
+     // true if GPS is navigating
+     private boolean mNavigating;
+@@ -216,6 +216,9 @@ public class GpsLocationProvider implements LocationProviderInterface {
+     // true if we started navigation
+     private boolean mStarted;
+ 
++    // true if XTRA is supported
++    private boolean mSupportsXtra;
++
+     // for calculating time to first fix
+     private long mFixRequestTime = 0;
+     // time to first fix for most recent session
+@@ -522,7 +525,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
+     }
+ 
+     private void handleDownloadXtraData() {
+-        if (!mDownloadXtraDataPending) {
++        if (!mNetworkAvailable) {
+             // try again when network is up
+             mDownloadXtraDataPending = true;
+             return;
+@@ -659,6 +662,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
+         mEnabled = native_init();
+ 
+         if (mEnabled) {
++            mSupportsXtra = native_supports_xtra();
+             if (mSuplServerHost != null) {
+                 native_set_agps_server(AGPS_TYPE_SUPL, mSuplServerHost, mSuplServerPort);
+             }
+@@ -860,7 +864,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
+             return true;
+         }
+         if ("force_xtra_injection".equals(command)) {
+-            if (native_supports_xtra()) {
++            if (mSupportsXtra) {
+                 xtraDownloadRequest();
+                 return true;
+             }
+@@ -1383,7 +1387,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
+                     handleInjectNtpTime();
+                     break;
+                 case DOWNLOAD_XTRA_DATA:
+-                    if (native_supports_xtra()) {
++                    if (mSupportsXtra) {
+                         handleDownloadXtraData();
+                     }
+                     break;
 diff --git a/media/java/android/media/AudioManager.java b/media/java/android/media/AudioManager.java
 index bbbba74..72d780b 100644
 --- a/media/java/android/media/AudioManager.java
@@ -1508,7 +1540,7 @@ index 5f28582..6b8c9cc 100644
  
  LOCAL_SHARED_LIBRARIES := \
 diff --git a/libaudio/AudioHardware.cpp b/libaudio/AudioHardware.cpp
-index 78b6a3e..fda2852 100644
+index 78b6a3e..fcfb5e4 100644
 --- a/libaudio/AudioHardware.cpp
 +++ b/libaudio/AudioHardware.cpp
 @@ -46,7 +46,7 @@ const uint32_t AudioHardware::inputSamplingRates[] = {
@@ -1559,7 +1591,7 @@ index 78b6a3e..fda2852 100644
 +
 +status_t AudioHardware::setFmVolume(float v)
 +{
-+    float ratio = 2.5;
++    float ratio = 1.0;
 +    int volume = (unsigned int)(AudioSystem::logToLinear(v) * ratio);
 +
 +    char volhex[10] = "";
@@ -1644,7 +1676,7 @@ index f68f249..2ce0a57 100644
 
 project packages/apps/Camera/
 diff --git a/src/com/android/camera/Camera.java b/src/com/android/camera/Camera.java
-index f0d38af..d66a026 100644
+index f0d38af..95b0fc4 100644
 --- a/src/com/android/camera/Camera.java
 +++ b/src/com/android/camera/Camera.java
 @@ -89,7 +89,9 @@ import java.util.Collections;
@@ -1666,30 +1698,16 @@ index f0d38af..d66a026 100644
  
      private GLRootView mGLRootView;
  
-@@ -641,7 +644,13 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -641,7 +644,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
              Log.v(TAG, "mPictureDisplayedToJpegCallbackTime = "
                      + mPictureDisplayedToJpegCallbackTime + "ms");
              mHeadUpDisplay.setEnabled(true);
 -
 + 
-+            // Temperary Hack -- cn.fyodor
-+            // Store the data before the next preview showing
-+            mImageCapture.storeImage(jpegData, camera, mLocation);
-+            mFirstTimeInitialized = false;
-+            System.exit(0);
-+ 
              if (!mIsImageCaptureIntent) {
                  // We want to show the taken picture for a while, so we wait
                  // for at least 1.2 second before restarting the preview.
-@@ -652,7 +661,6 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
-                     mHandler.sendEmptyMessageDelayed(RESTART_PREVIEW, delay);
-                 }
-             }
--            mImageCapture.storeImage(jpegData, camera, mLocation);
- 
-             // Calculate this in advance of each shot so we don't add to shutter
-             // latency. It's true that someone else could write to the SD card in
-@@ -906,27 +914,26 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -906,27 +909,26 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
      public void onCreate(Bundle icicle) {
          super.onCreate(icicle);
  
@@ -1698,13 +1716,13 @@ index f0d38af..d66a026 100644
 -
 -        mPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 -        CameraSettings.upgradePreferences(mPreferences);
--
++        devlatch = new CountDownLatch(1);
+ 
 -        mQuickCapture = getQuickCaptureSettings();
 -
 -        // comment out -- unused now.
 -        //mQuickCapture = getQuickCaptureSettings();
-+        devlatch = new CountDownLatch(1);
- 
+-
 -        // we need to reset exposure for the preview
 -        resetExposureCompensation();
          /*
@@ -1728,7 +1746,7 @@ index f0d38af..d66a026 100644
                      startPreview();
                  } catch (CameraHardwareException e) {
                      // In eng build, we throw the exception so that test tool
-@@ -940,6 +947,23 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -940,6 +942,23 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
          });
          startPreviewThread.start();
  
@@ -1752,7 +1770,7 @@ index f0d38af..d66a026 100644
          // don't set mSurfaceHolder here. We have it set ONLY within
          // surfaceChanged / surfaceDestroyed, other parts of the code
          // assume that when it is set, the surface is also set.
-@@ -978,6 +1002,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -978,6 +997,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
          } catch (InterruptedException ex) {
              // ignore
          }
@@ -1760,16 +1778,6 @@ index f0d38af..d66a026 100644
      }
  
      private void changeHeadUpDisplayState() {
-@@ -1457,7 +1482,8 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
-             // ignore backs while we're taking a picture
-             return;
-         } else if (mHeadUpDisplay == null || !mHeadUpDisplay.collapse()) {
--            super.onBackPressed();
-+            mFirstTimeInitialized = false;
-+            System.exit(0);
-         }
-     }
- 
 diff --git a/src/com/android/camera/ui/GLRootView.java b/src/com/android/camera/ui/GLRootView.java
 index d8ae0f8..04e7138 100644
 --- a/src/com/android/camera/ui/GLRootView.java

@@ -8,9 +8,8 @@ Notes:
   This patch mainly contains:
 
   - ability to compile with java 1.6
-  - libdvm.so optimization by Jim Huang(the header is in extra/)
+  - libdvm.so optimization by Jim Huang
   - adjusted prelink mapping to avoid link_image error
-  - camera snapshot working and Camera app could exit properly
   - the patch from Cy to implement 'exec' command in init
   - the patch from Cy to make the headset icon visible
   - fixes of compilation error
@@ -24,7 +23,7 @@ Notes:
 
 * busybox(Cy version) was needed to run scripts in /system/etc/init.d.
 
-* Superuser and FileManager apks should be downloaded from github if you want.
+* Camera preview/snapshot is fully working now.
 
-* Camera preview is not working right now.
+* Superuser/FileManager/FM apks should be downloaded from github.
 
