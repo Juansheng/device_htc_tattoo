@@ -71,6 +71,9 @@ int radioOn()
     // FM_RX_IFFREQ_HILO_AUTOMATIC
     system("hcitool cmd 0x3f 0x135 0x23 0x02 0x00 0x00 0x02");
 
+    // A hack to tune down the FM volume(about 10% of maximum)
+    system("hcitool cmd 0x3f 0x135 0x1c 0x02 0x00 0x19 0x96");
+
     radioEnabled = true;
 
     if (lastFreq != 0) {
