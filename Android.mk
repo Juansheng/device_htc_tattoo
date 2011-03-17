@@ -15,7 +15,9 @@
 LOCAL_PATH := $(my-dir)
 subdir_makefiles := \
 	$(LOCAL_PATH)/extras/libcamera2/Android.mk \
+	$(LOCAL_PATH)/extras/libopencorehw/Android.mk \
 	$(LOCAL_PATH)/extras/libsensors/Android.mk \
+	$(LOCAL_PATH)/extras/libstagefrighthw/Android.mk \
 	$(LOCAL_PATH)/extras/qcom_mm-core/Android.mk \
 	$(LOCAL_PATH)/extras/su/Android.mk
 

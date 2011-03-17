@@ -72,7 +72,7 @@ extern "C" {
 #define DEFAULT_PICTURE_HEIGHT 1536
 
 #define THUMBNAIL_BUFFER_SIZE (THUMBNAIL_WIDTH * THUMBNAIL_HEIGHT * 3/2)
-#define DEFAULT_PREVIEW_SETTING 8
+#define DEFAULT_PREVIEW_SETTING 5
 #define DEFAULT_FRAMERATE 15
 #define PREVIEW_SIZE_COUNT (sizeof(preview_sizes)/sizeof(preview_size_type))
 
@@ -310,7 +310,7 @@ void QualcommCameraHardware::initDefaultParameters()
     p.set(CameraParameters::KEY_SUPPORTED_EFFECTS, effect_values);
     p.set(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE, whitebalance_values);
     p.set(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES, "2048x1536,1600x1200,1024x768");
-    p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES, "240x160");
+    p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES, "320x240,240x160");
 
     if (setParameters(p) != NO_ERROR) {
         LOGE("Failed to set default parameters?!");
