@@ -525,6 +525,32 @@ index cbf94cf..c483441 100644
              public boolean setComposingText(CharSequence text, int newCursorPosition) {
                  return true;
 
+project external/stlport/
+diff --git a/Android.mk b/Android.mk
+index 79ee889..7760f92 100755
+--- a/Android.mk
++++ b/Android.mk
+@@ -51,9 +51,6 @@ LOCAL_MODULE := libstlport
+ LOCAL_CFLAGS := $(libstlport_cflags)
+ LOCAL_CPPFLAGS := $(libstlport_cppflags)
+ 
+-LOCAL_NDK_VERSION := 4
+-LOCAL_SDK_VERSION := 8
+-
+ include $(LOCAL_PATH)/libstlport.mk
+ include $(BUILD_SHARED_LIBRARY)
+ 
+@@ -67,9 +64,6 @@ LOCAL_MODULE := libstlport_static
+ LOCAL_CFLAGS := $(libstlport_cflags)
+ LOCAL_CPPFLAGS := $(libstlport_cppflags)
+ 
+-LOCAL_NDK_VERSION := 4
+-LOCAL_SDK_VERSION := 8
+-
+ include $(LOCAL_PATH)/libstlport.mk
+ include $(BUILD_STATIC_LIBRARY)
+ 
+
 project frameworks/base/
 diff --git a/api/current.xml b/api/current.xml
 index 9d259f3..5c7a657 100644
@@ -766,6 +792,23 @@ index 9ea6c7b..5c58fcf 100644
  
      AUDIO_SOURCE_LIST_END  // must be last - used to validate audio source type
  };
+diff --git a/include/utils/Asset.h b/include/utils/Asset.h
+index 5908bcc..b2697d4 100644
+--- a/include/utils/Asset.h
++++ b/include/utils/Asset.h
+@@ -63,11 +63,7 @@ public:
+ 
+     enum {
+         /* data larger than this does not get uncompressed into a buffer */
+-#ifdef HAVE_ANDROID_OS
+-        UNCOMPRESS_DATA_MAX = 1 * 1024 * 1024
+-#else
+-        UNCOMPRESS_DATA_MAX = 2 * 1024 * 1024
+-#endif
++        UNCOMPRESS_DATA_MAX = 3 * 1024 * 1024
+     };
+ 
+     /*
 diff --git a/libs/audioflinger/A2dpAudioInterface.cpp b/libs/audioflinger/A2dpAudioInterface.cpp
 index 995e31c..e87927f 100644
 --- a/libs/audioflinger/A2dpAudioInterface.cpp
@@ -1410,6 +1453,18 @@ index 47bcc12..0eae766 100644
          default:
              return BBinder::onTransact(code, data, reply, flags);
      }
+diff --git a/media/libmediaplayerservice/Android.mk b/media/libmediaplayerservice/Android.mk
+index cf97b23..ae882d5 100644
+--- a/media/libmediaplayerservice/Android.mk
++++ b/media/libmediaplayerservice/Android.mk
+@@ -37,6 +37,7 @@ LOCAL_SHARED_LIBRARIES :=     		\
+ 	libvorbisidec         			\
+ 	libsonivox            			\
+ 	libmedia              			\
++	libcamera_client    			\
+ 	libandroid_runtime    			\
+ 	libstagefright        			\
+ 	libstagefright_omx    			\
 diff --git a/services/java/com/android/server/status/StatusBarPolicy.java b/services/java/com/android/server/status/StatusBarPolicy.java
 index 94d1cb4..9273271 100644
 --- a/services/java/com/android/server/status/StatusBarPolicy.java
@@ -1675,8 +1730,32 @@ index f68f249..2ce0a57 100644
              Mutex       mLock;
 
 project packages/apps/Camera/
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 9cdd779..de1a7c1 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -16,6 +16,7 @@
+     <uses-permission android:name="android.permission.SET_WALLPAPER" />
+     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+     <uses-permission android:name="android.permission.READ_SMS" />
++    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+ 
+     <application android:icon="@drawable/ic_launcher_camera"
+             android:label="@string/camera_label"
+@@ -25,6 +26,11 @@
+                 <action android:name="android.intent.action.CAMERA_BUTTON"/>
+             </intent-filter>
+         </receiver>
++        <receiver android:name="BootCamera">
++            <intent-filter>
++                <action android:name="android.intent.action.BOOT_COMPLETED"/>
++            </intent-filter>
++        </receiver>
+         <activity android:name="com.android.camera.Camera"
+                 android:configChanges="orientation|keyboardHidden"
+                 android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
 diff --git a/src/com/android/camera/Camera.java b/src/com/android/camera/Camera.java
-index f0d38af..95b0fc4 100644
+index f0d38af..a394e9d 100644
 --- a/src/com/android/camera/Camera.java
 +++ b/src/com/android/camera/Camera.java
 @@ -89,7 +89,9 @@ import java.util.Collections;
@@ -1707,6 +1786,15 @@ index f0d38af..95b0fc4 100644
              if (!mIsImageCaptureIntent) {
                  // We want to show the taken picture for a while, so we wait
                  // for at least 1.2 second before restarting the preview.
+@@ -856,7 +859,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+ 
+         public void onSnap() {
+             // If we are already in the middle of taking a snapshot then ignore.
+-            if (mPausing || mStatus == SNAPSHOT_IN_PROGRESS) {
++            if (mPausing || mStatus == SNAPSHOT_IN_PROGRESS || !mPreviewing) {
+                 return;
+             }
+             mCaptureStartTime = System.currentTimeMillis();
 @@ -906,27 +909,26 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
      public void onCreate(Bundle icicle) {
          super.onCreate(icicle);
