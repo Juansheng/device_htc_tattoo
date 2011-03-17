@@ -11,19 +11,13 @@ Notes:
   - libdvm.so optimization by Jim Huang
   - adjusted prelink mapping to avoid link_image error
   - the patch from Cy to implement 'exec' command in init
-  - the patch from Cy to make the headset icon visible
-  - fixes of compilation error
   - FM implementation
 
-  NOTE: added source files are located at ./extras/absent directory.
+  NOTE: extra sources are stored in ./extras/absent.
 
-* Kernel had been applied with backported BFS-316 patch.
+* Every hardware is fully working now.
 
-* tattoo-hack.ko module had been built in the kernel.
+* Modules added into the Kernel: Bfs 316, tattoo-hack, and compcache.
 
-* busybox(Cy version) was needed to run scripts in /system/etc/init.d.
-
-* Camera preview/snapshot is fully working now.
-
-* Superuser/FileManager/FM apks should be downloaded from github.
+* Packages got from Cy: busybox, Superuser, FileManager, and FM.
 
