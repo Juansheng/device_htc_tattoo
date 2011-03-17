@@ -87,21 +87,22 @@ PRODUCT_COPY_FILES += \
 
 # Files in /system/etc
 PRODUCT_COPY_FILES += \
+    device/htc/tattoo/prebuilt/system/etc/apns-conf.xml:system/etc/apns-conf.xml \
 	device/htc/tattoo/prebuilt/system/etc/AudioPara4.csv:system/etc/AudioPara4.csv \
 	device/htc/tattoo/prebuilt/system/etc/AudioFilter.csv:system/etc/AudioFilter.csv \
 	device/htc/tattoo/prebuilt/system/etc/AudioPreProcess.csv:system/etc/AudioPreProcess.csv \
-    device/htc/tattoo/prebuilt/system/etc/apns-conf.xml:system/etc/apns-conf.xml \
     device/htc/tattoo/prebuilt/system/etc/bash/bash_logout:system/etc/bash/bash_logout \
     device/htc/tattoo/prebuilt/system/etc/bash/bashrc:system/etc/bash/bashrc \
     device/htc/tattoo/prebuilt/system/etc/gps.conf:system/etc/gps.conf \
-    device/htc/tattoo/prebuilt/system/etc/passwd:system/etc/passwd \
     device/htc/tattoo/prebuilt/system/etc/hosts:system/etc/hosts \
-    device/htc/tattoo/prebuilt/system/etc/resolv.conf:system/etc/resolv.conf \
     device/htc/tattoo/prebuilt/system/etc/init.d/00sysctl:system/etc/init.d/00sysctl \
     device/htc/tattoo/prebuilt/system/etc/init.d/01dalvikcache:system/etc/init.d/01dalvikcache \
     device/htc/tattoo/prebuilt/system/etc/init.d/08compcache:system/etc/init.d/08compcache \
     device/htc/tattoo/prebuilt/system/etc/init.d/20opt_and_fix:system/etc/init.d/20opt_and_fix \
     device/htc/tattoo/prebuilt/system/etc/init.d/80userinit:system/etc/init.d/80userinit \
+    device/htc/tattoo/prebuilt/system/etc/media_profiles.xml:/system/etc/media_profiles.xml \
+    device/htc/tattoo/prebuilt/system/etc/passwd:system/etc/passwd \
+    device/htc/tattoo/prebuilt/system/etc/resolv.conf:system/etc/resolv.conf \
     device/htc/tattoo/prebuilt/system/etc/sysctl.conf:system/etc/sysctl.conf \
     device/htc/tattoo/prebuilt/system/etc/terminfo/l/linux:system/etc/terminfo/l/linux \
     device/htc/tattoo/prebuilt/system/etc/terminfo/u/unknown:system/etc/terminfo/u/unknown \
@@ -147,11 +148,4 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/lib/libOmxMpeg4Dec.so:system/lib/libOmxMpeg4Dec.so \
 	device/htc/tattoo/prebuilt/system/lib/libOmxVidEnc.so:system/lib/libOmxVidEnc.so \
 	device/htc/tattoo/prebuilt/system/lib/libt9.so:system/lib/libt9.so
-
-	#device/htc/tattoo/prebuilt/system/lib/hw/sensors.bahamas.so:system/lib/hw/sensors.bahamas.so \
-# Ubuntu fonts
-PRODUCT_COPY_FILES += \
-	device/htc/tattoo/prebuilt/system/fonts/DroidSans.ttf:system/fonts/DroidSans.ttf \
-	device/htc/tattoo/prebuilt/system/fonts/DroidSansFallback.ttf:system/fonts/DroidSansFallback.ttf \
-	device/htc/tattoo/prebuilt/system/fonts/DroidSans-Bold.ttf:system/fonts/DroidSans-Bold.ttf
 
