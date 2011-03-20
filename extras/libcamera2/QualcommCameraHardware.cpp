@@ -138,6 +138,7 @@ static preview_size_type preview_sizes[] = {
     { 288, 192 },
     { 240, 240 }, // QCIF
     { 240, 160 }, // SQVGA
+    { 176, 144 },
 };
 
 static int attr_lookup(const struct str_map *const arr, const char *name)
@@ -310,7 +311,7 @@ void QualcommCameraHardware::initDefaultParameters()
     p.set(CameraParameters::KEY_SUPPORTED_EFFECTS, effect_values);
     p.set(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE, whitebalance_values);
     p.set(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES, "2048x1536,1600x1200,1024x768");
-    p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES, "320x240,240x160");
+    p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES, "320x240,240x160,176x144");
 
     if (setParameters(p) != NO_ERROR) {
         LOGE("Failed to set default parameters?!");
@@ -378,24 +379,20 @@ void QualcommCameraHardware::startCamera()
 #if 0 // useless now
     *(void **)&LINK_cam_frame =
         ::dlsym(libmmcamera, "cam_frame");
-#endif
-
     *(void **)&LINK_camframe_terminate =
         ::dlsym(libmmcamera, "camframe_terminate");
+    *(void **)&LINK_jpeg_encoder_encode =
+        ::dlsym(libmmcamera, "jpeg_encoder_encode");
+    *(void **)&LINK_jpeg_encoder_join =
+        ::dlsym(libmmcamera, "jpeg_encoder_join");
+    *(void **)&LINK_mmcamera_camframe_callback =
+        ::dlsym(libmmcamera, "mmframe_cb");
+    *LINK_mmcamera_camframe_callback = receive_camframe_callback;
+
+#endif
 
     *(void **)&LINK_jpeg_encoder_init =
         ::dlsym(libmmcamera, "jpeg_encoder_init");
-
-    *(void **)&LINK_jpeg_encoder_encode =
-        ::dlsym(libmmcamera, "jpeg_encoder_encode");
-
-    *(void **)&LINK_jpeg_encoder_join =
-        ::dlsym(libmmcamera, "jpeg_encoder_join");
-
-    *(void **)&LINK_mmcamera_camframe_callback =
-        ::dlsym(libmmcamera, "mmframe_cb");
-
-    *LINK_mmcamera_camframe_callback = receive_camframe_callback;
 
     *(void **)&LINK_cam_set_frame_callback =
         ::dlsym(libmmcamera, "cam_set_frame_callback");
@@ -817,7 +814,7 @@ static void *cam_frame_click(void *data)
     fd_set readfds;
     int ret;
 
-    // found in assembled codes of all libmmcamera
+    // found in assembled codes
     memset(&readfds, 0, sizeof(readfds));
 
     act.sa_sigaction = &handler;
@@ -1288,7 +1285,6 @@ void QualcommCameraHardware::release()
     }
 #endif
 
-    // why ~QualcommCameraHardware() not called --> fixed!
     Mutex::Autolock lock(&singleton_lock);
     singleton_releasing = true;
 
@@ -1564,6 +1560,7 @@ void QualcommCameraHardware::initCameraParameters()
 {
     LOGV("initCameraParameters: E");
 
+// FIXME
 #define SET_PARM(x, y) do {                                        \
     iLog("initCameraParameters: set parm: %s, %d", #x, y);         \
     native_set_parm(x, sizeof(y), (void *)&(y));                   \
@@ -1601,6 +1598,8 @@ status_t QualcommCameraHardware::setParameters(
         // Validate the preview sizes
         size_t i;
         for (i = 0; i < PREVIEW_SIZE_COUNT; ++i, ++ps) {
+            iLog("requested size %dx%d, array %dx%d",
+                width, height, ps->width, ps->height);
             if (width == ps->width && height == ps->height)
                 break;
         }
