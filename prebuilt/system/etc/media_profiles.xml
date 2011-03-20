@@ -79,12 +79,12 @@
     <!-- Each camcorder profile defines a set of predefined configuration parameters -->
     <CamcorderProfiles>
 
-        <EncoderProfile quality="high" fileFormat="mp4" duration="60">
+        <EncoderProfile quality="high" fileFormat="3gp" duration="60">
             <Video codec="h263"
-                   bitRate="360000"
-                   width="352"
-                   height="288"
-                   frameRate="30" />
+                   bitRate="320000"
+                   width="320"
+                   height="240"
+                   frameRate="20" />
 
             <Audio codec="amrnb"
                    bitRate="12200"
@@ -97,7 +97,7 @@
                    bitRate="192000"
                    width="176"
                    height="144"
-                   frameRate="30" />
+                   frameRate="20" />
 
             <Audio codec="amrnb"
                    bitRate="12200"
@@ -125,8 +125,8 @@
     -->
     <VideoEncoderCap name="h263" enabled="true"
         minBitRate="192000" maxBitRate="420000"
-        minFrameWidth="176" maxFrameWidth="352"
-        minFrameHeight="144" maxFrameHeight="288"
+        minFrameWidth="176" maxFrameWidth="320"
+        minFrameHeight="144" maxFrameHeight="240"
         minFrameRate="1" maxFrameRate="20" />
 
     <VideoEncoderCap name="m4v" enabled="true"
@@ -147,6 +147,6 @@
         for TEST applications. For other applications, we do
         not perform any checks at all.
     -->
-    <VideoDecoderCap name="wmv" enabled="false"/>
-    <AudioDecoderCap name="wma" enabled="false"/>
+    <VideoDecoderCap name="wmv" enabled="true"/>
+    <AudioDecoderCap name="wma" enabled="true"/>
 </MediaSettings>
