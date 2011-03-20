@@ -1217,64 +1217,6 @@ index a13d0bd..26454be 100644
          Mutex   mLock;
          Condition mWaitWorkCV;
          Vector <AudioCommand *> mAudioCommands; // list of pending commands
-diff --git a/location/java/com/android/internal/location/GpsLocationProvider.java b/location/java/com/android/internal/location/GpsLocationProvider.java
-index 15d692c..d44be7e 100755
---- a/location/java/com/android/internal/location/GpsLocationProvider.java
-+++ b/location/java/com/android/internal/location/GpsLocationProvider.java
-@@ -199,7 +199,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
-     // flags to trigger NTP or XTRA data download when network becomes available
-     // initialized to true so we do NTP and XTRA when the network comes up after booting
-     private boolean mInjectNtpTimePending = true;
--    private boolean mDownloadXtraDataPending = true;
-+    private boolean mDownloadXtraDataPending = false;
- 
-     // true if GPS is navigating
-     private boolean mNavigating;
-@@ -216,6 +216,9 @@ public class GpsLocationProvider implements LocationProviderInterface {
-     // true if we started navigation
-     private boolean mStarted;
- 
-+    // true if XTRA is supported
-+    private boolean mSupportsXtra;
-+
-     // for calculating time to first fix
-     private long mFixRequestTime = 0;
-     // time to first fix for most recent session
-@@ -522,7 +525,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
-     }
- 
-     private void handleDownloadXtraData() {
--        if (!mDownloadXtraDataPending) {
-+        if (!mNetworkAvailable) {
-             // try again when network is up
-             mDownloadXtraDataPending = true;
-             return;
-@@ -659,6 +662,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
-         mEnabled = native_init();
- 
-         if (mEnabled) {
-+            mSupportsXtra = native_supports_xtra();
-             if (mSuplServerHost != null) {
-                 native_set_agps_server(AGPS_TYPE_SUPL, mSuplServerHost, mSuplServerPort);
-             }
-@@ -860,7 +864,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
-             return true;
-         }
-         if ("force_xtra_injection".equals(command)) {
--            if (native_supports_xtra()) {
-+            if (mSupportsXtra) {
-                 xtraDownloadRequest();
-                 return true;
-             }
-@@ -1383,7 +1387,7 @@ public class GpsLocationProvider implements LocationProviderInterface {
-                     handleInjectNtpTime();
-                     break;
-                 case DOWNLOAD_XTRA_DATA:
--                    if (native_supports_xtra()) {
-+                    if (mSupportsXtra) {
-                         handleDownloadXtraData();
-                     }
-                     break;
 diff --git a/media/java/android/media/AudioManager.java b/media/java/android/media/AudioManager.java
 index bbbba74..72d780b 100644
 --- a/media/java/android/media/AudioManager.java
@@ -1366,7 +1308,7 @@ index 47a8cfc..90fb41c 100644
  
      /**
 diff --git a/media/libmedia/AudioSystem.cpp b/media/libmedia/AudioSystem.cpp
-index 5e6ce42..1e53408 100644
+index 5e6ce42..54b3db2 100644
 --- a/media/libmedia/AudioSystem.cpp
 +++ b/media/libmedia/AudioSystem.cpp
 @@ -364,6 +364,13 @@ unsigned int AudioSystem::getInputFramesLost(audio_io_handle_t ioHandle) {
@@ -1383,7 +1325,15 @@ index 5e6ce42..1e53408 100644
  // ---------------------------------------------------------------------------
  
  void AudioSystem::AudioFlingerClient::binderDied(const wp<IBinder>& who) {
-@@ -704,6 +711,16 @@ bool AudioSystem::isInputDevice(audio_devices device)
+@@ -565,6 +572,7 @@ audio_io_handle_t AudioSystem::getOutput(stream_type stream,
+     // to the first use case we want to cover (Voice Recognition and Voice Dialer over
+     // Bluetooth SCO
+     if ((flags & AudioSystem::OUTPUT_FLAG_DIRECT) == 0 &&
++        (stream != AudioSystem::FM) &&
+         ((stream != AudioSystem::VOICE_CALL && stream != AudioSystem::BLUETOOTH_SCO) ||
+          channels != AudioSystem::CHANNEL_OUT_MONO ||
+          (samplingRate != 8000 && samplingRate != 16000))) {
+@@ -704,6 +712,16 @@ bool AudioSystem::isInputDevice(audio_devices device)
      }
  }
  
@@ -1400,7 +1350,7 @@ index 5e6ce42..1e53408 100644
  bool AudioSystem::isA2dpDevice(audio_devices device)
  {
      if ((popCount(device) == 1 ) &&
-@@ -792,6 +809,8 @@ const char *AudioParameter::keySamplingRate = "sampling_rate";
+@@ -792,6 +810,8 @@ const char *AudioParameter::keySamplingRate = "sampling_rate";
  const char *AudioParameter::keyFormat = "format";
  const char *AudioParameter::keyChannels = "channels";
  const char *AudioParameter::keyFrameCount = "frame_count";
@@ -1465,6 +1415,19 @@ index cf97b23..ae882d5 100644
  	libandroid_runtime    			\
  	libstagefright        			\
  	libstagefright_omx    			\
+diff --git a/media/libstagefright/SampleIterator.cpp b/media/libstagefright/SampleIterator.cpp
+index 7155c61..f5ca396 100644
+--- a/media/libstagefright/SampleIterator.cpp
++++ b/media/libstagefright/SampleIterator.cpp
+@@ -135,7 +135,7 @@ status_t SampleIterator::seekTo(uint32_t sampleIndex) {
+     status_t err;
+     if ((err = findSampleTime(sampleIndex, &mCurrentSampleTime)) != OK) {
+         LOGE("findSampleTime return error");
+-        return err;
++        //return err;
+     }
+ 
+     mCurrentSampleIndex = sampleIndex;
 diff --git a/services/java/com/android/server/status/StatusBarPolicy.java b/services/java/com/android/server/status/StatusBarPolicy.java
 index 94d1cb4..9273271 100644
 --- a/services/java/com/android/server/status/StatusBarPolicy.java
@@ -1938,8 +1901,176 @@ index ff7c465..33d098e 100644
                  android:label="@string/delete_images_message"
 
 project packages/apps/Launcher2/
+diff --git a/AndroidManifest.xml b/AndroidManifest.xml
+index 84ee599..68ef42b 100644
+--- a/AndroidManifest.xml
++++ b/AndroidManifest.xml
+@@ -61,7 +61,8 @@
+     <uses-permission android:name="android.permission.BIND_APPWIDGET" />
+     <uses-permission android:name="com.android.launcher.permission.READ_SETTINGS" />
+     <uses-permission android:name="com.android.launcher.permission.WRITE_SETTINGS" />
+-    
++    <uses-permission android:name="android.permission.SET_ANIMATION_SCALE" />
++
+     <application
+         android:name="com.android.launcher2.LauncherApplication"
+         android:process="@string/process"
+diff --git a/src/com/android/launcher2/AllApps2D.java b/src/com/android/launcher2/AllApps2D.java
+index 7ad5e49..f03cc89 100644
+--- a/src/com/android/launcher2/AllApps2D.java
++++ b/src/com/android/launcher2/AllApps2D.java
+@@ -77,6 +77,7 @@ public class AllApps2D
+         @Override
+         public View focusSearch(int direction) {
+             if (direction == FOCUS_UP) return super.focusSearch(direction);
++            if (direction == FOCUS_LEFT) return super.focusSearch(direction);
+             return null;
+         }
+     }
+diff --git a/src/com/android/launcher2/Launcher.java b/src/com/android/launcher2/Launcher.java
+index 6bd915a..d11613c 100644
+--- a/src/com/android/launcher2/Launcher.java
++++ b/src/com/android/launcher2/Launcher.java
+@@ -84,6 +84,9 @@ import java.io.FileNotFoundException;
+ import java.io.IOException;
+ import java.io.DataInputStream;
+ 
++import android.os.ServiceManager;
++import android.view.IWindowManager;
++
+ import com.android.launcher.R;
+ 
+ /**
+@@ -203,6 +206,11 @@ public final class Launcher extends Activity
+ 
+     private ImageView mPreviousView;
+     private ImageView mNextView;
++    private ImageView hotseatLeft;
++    private ImageView hotseatRight;
++
++    private IWindowManager wm ;
++    private float savedTransitionAnimationScale ;
+ 
+     // Hotseats (quick-launch icons next to AllApps)
+     private static final int NUM_HOTSEATS = 2;
+@@ -559,6 +567,15 @@ public final class Launcher extends Activity
+     @Override
+     protected void onResume() {
+         super.onResume();
++ 
++        // Disable animation while coming back to Home Screen for better user experience.
++        wm = IWindowManager.Stub.asInterface(ServiceManager.getService("window"));
++        try {
++            savedTransitionAnimationScale = wm.getAnimationScale(1) ;
++            wm.setAnimationScale(1, 0.0f);
++        }catch(Exception e){
++            e.printStackTrace() ;
++        }
+ 
+         mPaused = false;
+ 
+@@ -572,6 +589,15 @@ public final class Launcher extends Activity
+     @Override
+     protected void onPause() {
+         super.onPause();
++
++        // Leaving Homescreen. Restore animation option selected by user.
++        wm = IWindowManager.Stub.asInterface(ServiceManager.getService("window"));
++        try {
++            wm.setAnimationScale(1, savedTransitionAnimationScale);
++        }catch(Exception e) {
++            e.printStackTrace() ;
++        }
++
+         dismissPreview(mPreviousView);
+         dismissPreview(mNextView);
+         mDragController.cancelDrag();
+@@ -720,10 +746,10 @@ public final class Launcher extends Activity
+         mHandleView.setOnClickListener(this);
+         mHandleView.setOnLongClickListener(this);
+ 
+-        ImageView hotseatLeft = (ImageView) findViewById(R.id.hotseat_left);
++        hotseatLeft = (ImageView) findViewById(R.id.hotseat_left);
+         hotseatLeft.setContentDescription(mHotseatLabels[0]);
+         hotseatLeft.setImageDrawable(mHotseatIcons[0]);
+-        ImageView hotseatRight = (ImageView) findViewById(R.id.hotseat_right);
++        hotseatRight = (ImageView) findViewById(R.id.hotseat_right);
+         hotseatRight.setContentDescription(mHotseatLabels[1]);
+         hotseatRight.setImageDrawable(mHotseatIcons[1]);
+ 
+@@ -1888,6 +1914,7 @@ public final class Launcher extends Activity
+     }
+ 
+     void showAllApps(boolean animated) {
++        mWorkspace.hideWallpaper(true);
+         mAllAppsGrid.zoom(1.0f, animated);
+ 
+         ((View) mAllAppsGrid).setFocusable(true);
+@@ -1895,6 +1922,11 @@ public final class Launcher extends Activity
+         
+         // TODO: fade these two too
+         mDeleteZone.setVisibility(View.GONE);
++        mHandleView.setVisibility(View.GONE);
++        mPreviousView.setVisibility(View.GONE);
++        mNextView.setVisibility(View.GONE);
++        hotseatLeft.setVisibility(View.GONE);
++        hotseatRight.setVisibility(View.GONE);
+     }
+ 
+     /**
+@@ -1942,6 +1974,13 @@ public final class Launcher extends Activity
+             mAllAppsGrid.zoom(0.0f, animated);
+             ((View)mAllAppsGrid).setFocusable(false);
+             mWorkspace.getChildAt(mWorkspace.getCurrentScreen()).requestFocus();
++            mWorkspace.hideWallpaper(false);
++
++            mHandleView.setVisibility(View.VISIBLE);
++            mPreviousView.setVisibility(View.VISIBLE);
++            mNextView.setVisibility(View.VISIBLE);
++            hotseatLeft.setVisibility(View.VISIBLE);
++            hotseatRight.setVisibility(View.VISIBLE);
+         }
+     }
+ 
+diff --git a/src/com/android/launcher2/LauncherApplication.java b/src/com/android/launcher2/LauncherApplication.java
+index eda92d9..e36dcac 100644
+--- a/src/com/android/launcher2/LauncherApplication.java
++++ b/src/com/android/launcher2/LauncherApplication.java
+@@ -43,11 +43,16 @@ public class LauncherApplication extends Application {
+         filter.addAction(Intent.ACTION_PACKAGE_CHANGED);
+         filter.addDataScheme("package");
+         registerReceiver(mModel, filter);
++
+         filter = new IntentFilter();
+         filter.addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_AVAILABLE);
+         filter.addAction(Intent.ACTION_EXTERNAL_APPLICATIONS_UNAVAILABLE);
+         registerReceiver(mModel, filter);
+ 
++        filter = new IntentFilter();
++        filter.addAction(Intent.ACTION_LOCALE_CHANGED);
++        registerReceiver(mModel, filter);
++
+         // Register for changes to the favorites
+         ContentResolver resolver = getContentResolver();
+         resolver.registerContentObserver(LauncherSettings.Favorites.CONTENT_URI, true,
+diff --git a/src/com/android/launcher2/LauncherModel.java b/src/com/android/launcher2/LauncherModel.java
+index 17f7573..f092ed7 100644
+--- a/src/com/android/launcher2/LauncherModel.java
++++ b/src/com/android/launcher2/LauncherModel.java
+@@ -409,6 +409,11 @@ public class LauncherModel extends BroadcastReceiver {
+                      startLoader(context, false);
+                 }
+             }
++            if (Intent.ACTION_LOCALE_CHANGED.equals(action)) {
++                synchronized (this) {
++                    mAllAppsLoaded = false;
++                }
++            }
+         }
+     }
+ 
 diff --git a/src/com/android/launcher2/Workspace.java b/src/com/android/launcher2/Workspace.java
-index c337c30..5d2c3e0 100644
+index c337c30..976698c 100644
 --- a/src/com/android/launcher2/Workspace.java
 +++ b/src/com/android/launcher2/Workspace.java
 @@ -62,7 +62,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
@@ -1966,7 +2097,26 @@ index c337c30..5d2c3e0 100644
          private float mTension;
  
          public WorkspaceOvershootInterpolator() {
-@@ -907,7 +907,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -810,6 +810,18 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+         }
+     }
+ 
++    public void hideWallpaper(boolean hide) {
++        IBinder windowToken = getWindowToken();
++        if (windowToken != null) {
++            if (hide)
++                  mWallpaperManager.sendWallpaperCommand(windowToken,
++                  "hide", 0, 0, 0, null);
++            else
++                  mWallpaperManager.sendWallpaperCommand(windowToken,
++                  "show", 0, 0, 0, null);
++        }
++    }
++
+     void enableChildrenCache(int fromScreen, int toScreen) {
+         if (fromScreen > toScreen) {
+             final int temp = fromScreen;
+@@ -907,7 +919,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
              if (mTouchState == TOUCH_STATE_SCROLLING) {
                  final VelocityTracker velocityTracker = mVelocityTracker;
                  velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
@@ -1975,7 +2125,7 @@ index c337c30..5d2c3e0 100644
                  
                  final int screenWidth = getWidth();
                  final int whichScreen = (mScrollX + (screenWidth / 2)) / screenWidth;
-@@ -918,13 +918,13 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -918,13 +930,13 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
                      // Don't fling across more than one screen at a time.
                      final int bound = scrolledPos < whichScreen ?
                              mCurrentScreen - 1 : mCurrentScreen;
@@ -1991,7 +2141,7 @@ index c337c30..5d2c3e0 100644
                  } else {
                      snapToScreen(whichScreen, 0, true);
                  }
-@@ -975,7 +975,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -975,7 +987,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
          final int screenDelta = Math.max(1, Math.abs(whichScreen - mCurrentScreen));
          final int newX = whichScreen * getWidth();
          final int delta = newX - mScrollX;
@@ -2000,7 +2150,7 @@ index c337c30..5d2c3e0 100644
  
          if (!mScroller.isFinished()) {
              mScroller.abortAnimation();
-@@ -992,7 +992,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -992,7 +1004,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
              duration += (duration / (velocity / BASELINE_FLING_VELOCITY))
                      * FLING_VELOCITY_INFLUENCE;
          } else {
