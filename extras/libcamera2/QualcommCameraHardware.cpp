@@ -201,6 +201,9 @@ static char *effect_values;
 // from qcamera/common/camera.h
 static const str_map antibanding[] = {
     { "off",  CAMERA_ANTIBANDING_OFF },
+    { "50hz",  CAMERA_ANTIBANDING_50HZ },
+    { "60hz",  CAMERA_ANTIBANDING_60HZ },
+    { "auto",  CAMERA_ANTIBANDING_AUTO },
     { NULL, 0 }
 };
 static char *antibanding_values;
@@ -309,16 +312,15 @@ void QualcommCameraHardware::initDefaultParameters()
     p.set(CameraParameters::KEY_SUPPORTED_ANTIBANDING, antibanding_values);
     p.set(CameraParameters::KEY_SUPPORTED_EFFECTS, effect_values);
     p.set(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE, whitebalance_values);
-    // TODO: support 2M/1M picture sizes
-    p.set(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES, "2048x1536"); //1600x1200,1024x768
+    p.set(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES, "2048x1536");
     p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES, "320x240,240x160,176x144");
     p.set(CameraParameters::KEY_SUPPORTED_FLASH_MODES, "off");
     p.set(CameraParameters::KEY_SUPPORTED_FOCUS_MODES, "fixed");
 
     p.set(CameraParameters::KEY_ZOOM_SUPPORTED, "true");
     p.set(CameraParameters::KEY_ZOOM, "0");
-    p.set(CameraParameters::KEY_MAX_ZOOM, "4");
-    p.set(CameraParameters::KEY_ZOOM_RATIOS, "100,150,200,250,300");
+    p.set(CameraParameters::KEY_MAX_ZOOM, "3"); // fix crash while zoom selected
+    p.set(CameraParameters::KEY_ZOOM_RATIOS, "100,200,300,400");
 
     if (setParameters(p) != NO_ERROR) {
         LOGE("Failed to set default parameters?!");
@@ -758,47 +760,6 @@ bool QualcommCameraHardware::native_set_parm(
     return true;
 }
 
-void QualcommCameraHardware::jpeg_set_location()
-{
-    bool encode_location = true;
-    camera_position_type pt;
-
-#define PARSE_LOCATION(what,type,fmt,desc) do {                                \
-        pt.what = 0;                                                           \
-        const char *what##_str = mParameters.get("gps-"#what);                 \
-        iLog("GPS PARM %s --> [%s]", "gps-"#what, what##_str);                 \
-        if (what##_str) {                                                      \
-            type what = 0;                                                     \
-            if (sscanf(what##_str, fmt, &what) == 1)                           \
-                pt.what = what;                                                \
-            else {                                                             \
-                LOGE("GPS " #what " %s could not"                              \
-                     " be parsed as a " #desc, what##_str);                    \
-                encode_location = false;                                       \
-            }                                                                  \
-        }                                                                      \
-        else {                                                                 \
-            iLog("GPS " #what " not specified: "                               \
-                 "defaulting to zero in EXIF header.");                        \
-            encode_location = false;                                           \
-       }                                                                       \
-    } while(0)
-
-    PARSE_LOCATION(timestamp, long, "%ld", "long");
-    if (!pt.timestamp) pt.timestamp = time(NULL);
-    PARSE_LOCATION(altitude, short, "%hd", "short");
-    PARSE_LOCATION(latitude, double, "%lf", "double float");
-    PARSE_LOCATION(longitude, double, "%lf", "double float");
-
-#undef PARSE_LOCATION
-
-    if (encode_location) {
-        LOGD("setting image location ALT %d LAT %lf LON %lf",
-             pt.altitude, pt.latitude, pt.longitude);
-    }
-    else iLog("not setting image location");
-}
-
 static void handler(int sig, siginfo_t *siginfo, void *context)
 {
     pthread_exit(NULL);
@@ -863,55 +824,51 @@ static void *cam_frame_click(void *data)
 
 void QualcommCameraHardware::runJpegEncodeThread(void *data)
 {
-    unsigned char *buffer ;
+    unsigned char *buffer;
 
     int rotation = mParameters.getInt("rotation");
     LOGD("native_jpeg_encode, rotation = %d", rotation);
 
     bool encode_location = true;
-        camera_position_type pt;
+    camera_position_type pt;
 
-        #define PARSE_LOCATION(what,type,fmt,desc) do { \
-                pt.what = 0; \
-                const char *what##_str = mParameters.get("gps-"#what); \
-                LOGD("GPS PARM %s --> [%s]", "gps-"#what, what##_str); \
-                if (what##_str) { \
-                        type what = 0; \
-                        if (sscanf(what##_str, fmt, &what) == 1) \
-                                pt.what = what; \
-                        else { \
-                                LOGE("GPS " #what " %s could not" \
-                                " be parsed as a " #desc, what##_str); \
-                                encode_location = false; \
-                        } \
-                } \
-                else { \
-                        LOGD("GPS " #what " not specified: " \
-                        "defaulting to zero in EXIF header."); \
-                        encode_location = false; \
-                } \
-        } while(0)
+#define PARSE_LOCATION(what,type,fmt,desc) do {                                \
+        pt.what = 0;                                                           \
+        const char *what##_str = mParameters.get("gps-"#what);                 \
+        iLog("GPS PARM %s --> [%s]", "gps-"#what, what##_str);                 \
+        if (what##_str) {                                                      \
+            type what = 0;                                                     \
+            if (sscanf(what##_str, fmt, &what) == 1)                           \
+                pt.what = what;                                                \
+            else {                                                             \
+                LOGE("GPS " #what " %s could not"                              \
+                     " be parsed as a " #desc, what##_str);                    \
+                encode_location = false;                                       \
+            }                                                                  \
+        }                                                                      \
+        else {                                                                 \
+            iLog("GPS " #what " not specified: "                               \
+                 "defaulting to zero in EXIF header.");                        \
+            encode_location = false;                                           \
+       }                                                                       \
+    } while(0)
 
     PARSE_LOCATION(timestamp, long, "%ld", "long");
     if (!pt.timestamp) pt.timestamp = time(NULL);
     PARSE_LOCATION(altitude, short, "%hd", "short");
     PARSE_LOCATION(latitude, double, "%lf", "double float");
     PARSE_LOCATION(longitude, double, "%lf", "double float");
+#undef PARSE_LOCATION
 
-        #undef PARSE_LOCATION
-
-    if (encode_location) {
+    if (encode_location)
         LOGD("setting image location ALT %d LAT %lf LON %lf",
              pt.altitude, pt.latitude, pt.longitude);
-    }
-    else {
-        LOGV("not setting image location");
-    }
+    else
+        iLog("not setting image location");
 
     camera_position_type *npt = &pt ;
-    if(!encode_location) {
+    if(!encode_location)
         npt = NULL;
-    }
 
     int jpeg_quality = mParameters.getInt("jpeg-quality");
     if (yuv420_save2jpeg((unsigned char*) mJpegHeap->mHeap->base(),
@@ -1001,7 +958,7 @@ bool QualcommCameraHardware::initPreview()
 
                 mFrameThreadRunning = !pthread_create(&mFrameThread,
                                                       NULL,
-                                                      cam_frame_click, //frame_thread,
+                                                      cam_frame_click,
                                                       &frames[cnt]);
                 if (mFrameThreadRunning)
                     iLog("Preview thread created");
@@ -1307,7 +1264,7 @@ void QualcommCameraHardware::stopPreviewInternal()
     if (mCameraRunning) {
         // Cancel auto focus.
         if (mMsgEnabled & CAMERA_MSG_FOCUS) {
-            iLog("canceling autofocus");
+            LOGV("canceling autofocus");
             cancelAutoFocus();
         }
 
@@ -1438,8 +1395,6 @@ status_t QualcommCameraHardware::autoFocus()
 void QualcommCameraHardware::runSnapshotThread(void *data)
 {
     iLog("runSnapshotThread E");
-
-    // TODO: support 2M/1M picture sizes
 
     if (native_start_snapshot(mCameraControlFd))
         receiveRawPicture();
