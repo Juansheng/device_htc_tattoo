@@ -34,6 +34,7 @@ extern "C" {
 #define CAM_CTRL_SUCCESS 1
 
 #define CAMERA_SET_PARM_DIMENSION 1
+#define CAMERA_SET_PARM_ZOOM 2
 #define CAMERA_SET_PARM_WB 14
 #define CAMERA_SET_PARM_EFFECT 15
 #define CAMERA_SET_PARM_ANTIBANDING 21
@@ -327,6 +328,7 @@ private:
     void setAntibanding();
     void setEffect();
     void setWhiteBalance();
+    void setZoom();
 
     Mutex mLock;
     bool mReleasedRecordingFrame;

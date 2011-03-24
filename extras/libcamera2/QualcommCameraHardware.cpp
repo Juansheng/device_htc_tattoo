@@ -201,9 +201,6 @@ static char *effect_values;
 // from qcamera/common/camera.h
 static const str_map antibanding[] = {
     { "off",  CAMERA_ANTIBANDING_OFF },
-    { "50hz",  CAMERA_ANTIBANDING_50HZ },
-    { "60hz",  CAMERA_ANTIBANDING_60HZ },
-    { "auto",  CAMERA_ANTIBANDING_AUTO },
     { NULL, 0 }
 };
 static char *antibanding_values;
@@ -231,7 +228,7 @@ static void receive_jpeg_fragment_callback(uint8_t *buff_ptr, uint32_t buff_size
 static void receive_jpeg_callback(jpeg_event_t status);
 
 static int camerafd;
-static int fd_frame;
+static int framefd;
 pthread_t w_thread;
 pthread_t jpegThread;
 
@@ -298,8 +295,10 @@ void QualcommCameraHardware::initDefaultParameters()
 
     p.setPictureSize(DEFAULT_PICTURE_WIDTH, DEFAULT_PICTURE_HEIGHT);
     p.set(CameraParameters::KEY_ANTIBANDING, CameraParameters::ANTIBANDING_OFF);
-    p.set(CameraParameters::KEY_EFFECT, CameraParameters::EFFECT_NONE);
+    p.set(CameraParameters::KEY_EFFECT, CameraParameters::EFFECT_NONE+1); // fix for Click
     p.set(CameraParameters::KEY_WHITE_BALANCE, CameraParameters::WHITE_BALANCE_AUTO);
+    p.set(CameraParameters::KEY_FLASH_MODE, CameraParameters::FLASH_MODE_OFF);
+    p.set(CameraParameters::KEY_FOCUS_MODE, CameraParameters::FOCUS_MODE_FIXED);
 
     // This will happen only once in the lifetime of the mediaserver process.
     // We do not free the _values arrays when we destroy the camera object.
@@ -310,15 +309,22 @@ void QualcommCameraHardware::initDefaultParameters()
     p.set(CameraParameters::KEY_SUPPORTED_ANTIBANDING, antibanding_values);
     p.set(CameraParameters::KEY_SUPPORTED_EFFECTS, effect_values);
     p.set(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE, whitebalance_values);
-    p.set(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES, "2048x1536,1600x1200,1024x768");
+    // TODO: support 2M/1M picture sizes
+    p.set(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES, "2048x1536"); //1600x1200,1024x768
     p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES, "320x240,240x160,176x144");
+    p.set(CameraParameters::KEY_SUPPORTED_FLASH_MODES, "off");
+    p.set(CameraParameters::KEY_SUPPORTED_FOCUS_MODES, "fixed");
+
+    p.set(CameraParameters::KEY_ZOOM_SUPPORTED, "true");
+    p.set(CameraParameters::KEY_ZOOM, "0");
+    p.set(CameraParameters::KEY_MAX_ZOOM, "4");
+    p.set(CameraParameters::KEY_ZOOM_RATIOS, "100,150,200,250,300");
 
     if (setParameters(p) != NO_ERROR) {
         LOGE("Failed to set default parameters?!");
     }
 
     iLog("initDefaultParameters X");
-
 }
 
 void QualcommCameraHardware::setCallbacks(notify_callback notify_cb,
@@ -388,7 +394,6 @@ void QualcommCameraHardware::startCamera()
     *(void **)&LINK_mmcamera_camframe_callback =
         ::dlsym(libmmcamera, "mmframe_cb");
     *LINK_mmcamera_camframe_callback = receive_camframe_callback;
-
 #endif
 
     *(void **)&LINK_jpeg_encoder_init =
@@ -431,11 +436,10 @@ void QualcommCameraHardware::startCamera()
 
     mCameraControlFd = camerafd;
 
-    // maitain a fd for select() later
-    fd_frame = open(MSM_CAMERA_CONTROL, O_RDWR);
-    if (fd_frame < 0)
-        LOGE("cam_frame_click: cannot open %s: %s",
-             MSM_CAMERA_CONTROL, strerror(errno));
+    // maintain a fd for cam_frame later
+    framefd = open(MSM_CAMERA_CONTROL, O_RDWR);
+    if (framefd < 0)
+        LOGE("cam_frame: cannot open %s: %s", MSM_CAMERA_CONTROL, strerror(errno));
 
     if (!LINK_jpeg_encoder_init()) {
         LOGE("jpeg_encoding_init failed.");
@@ -485,13 +489,14 @@ status_t QualcommCameraHardware::dump(int fd,
     return NO_ERROR;
 }
 
-bool QualcommCameraHardware::reg_unreg_buf(int camfd,
-                                           int width,
-                                           int height,
-                                           msm_frame_t *frame,
-                                           msm_pmem_t pmem_type,
-                                           unsigned char unregister,
-                                           unsigned char active)
+bool QualcommCameraHardware::reg_unreg_buf(
+    int camfd,
+    int width,
+    int height,
+    msm_frame_t *frame,
+    msm_pmem_t pmem_type,
+    unsigned char unregister,
+    unsigned char active)
 {
     uint32_t y_size;
     struct msm_pmem_info_t pmemBuf;
@@ -555,7 +560,7 @@ void QualcommCameraHardware::native_unregister_preview_bufs(
 
 static bool native_set_afmode(int camfd, isp3a_af_mode_t af_type)
 {
-    iLog("Click doesn't support auto focus mode");
+    LOGW("Click doesn't support auto focus mode");
     return NO_ERROR;
 }
 
@@ -612,8 +617,7 @@ static bool native_get_picture(int camfd, common_crop_t *crop)
 
     LOGV("crop: update %d", crop->update_flag);
 
-    iLog("native_get_picture status after ioctl %d", ctrlCmd.status);
-    iLog("native_get_picture X");
+    iLog("native_get_picture X with ctrlCmd.status %d", ctrlCmd.status);
 
     return true;
 }
@@ -743,7 +747,7 @@ bool QualcommCameraHardware::native_set_parm(
     ctrlCmd.length     = length;
     ctrlCmd.value      = value;
 
-    iLog("native_set_parm: type: %d, length=%d", type, length);
+    LOGV("native_set_parm: type: %d, length=%d", type, length);
 
     rc = ioctl(mCameraControlFd, MSM_CAM_IOCTL_CTRL_COMMAND, &ctrlCmd);
     if(rc < 0 || ctrlCmd.status != CAM_CTRL_SUCCESS) {
@@ -800,7 +804,7 @@ static void handler(int sig, siginfo_t *siginfo, void *context)
     pthread_exit(NULL);
 }
 
-// customized cam_frame function based on reassembled libmmcamera.so
+// customized cam_frame function based on libmmcamera.so
 static void *cam_frame_click(void *data)
 {
     iLog("Entering cam_frame_click");
@@ -825,23 +829,23 @@ static void *cam_frame_click(void *data)
     }
 
     FD_ZERO(&readfds);
-    FD_SET(fd_frame, &readfds);
+    FD_SET(framefd, &readfds);
 
     while (true) {
         timeout.tv_sec = 1; // guess
         timeout.tv_usec = 0;
 
-        ret = select(fd_frame+1, &readfds, NULL, NULL, &timeout);
+        ret = select(framefd+1, &readfds, NULL, NULL, &timeout);
         if (ret == -1) {
-            LOGE("calling select failed!");
+            LOGE("calling select() failed!");
             break;
-        } else if (FD_ISSET(fd_frame, &readfds)) {
+        } else if (FD_ISSET(framefd, &readfds)) {
             pthread_mutex_lock(&mutex_camframe);
             // ready to get frame
-            ret = ioctl(fd_frame, MSM_CAM_IOCTL_GETFRAME, frame);
+            ret = ioctl(framefd, MSM_CAM_IOCTL_GETFRAME, frame);
             if (ret >= 0) {
                 // put buffers to config VFE
-                if (ioctl(fd_frame, MSM_CAM_IOCTL_RELEASE_FRAMEE_BUFFER, frame) < 0)
+                if (ioctl(framefd, MSM_CAM_IOCTL_RELEASE_FRAMEE_BUFFER, frame) < 0)
                     LOGE("MSM_CAM_IOCTL_RELEASE_FRAME_BUFFER error %s", strerror(errno));
                 else
                     receive_camframe_callback(frame);
@@ -849,62 +853,13 @@ static void *cam_frame_click(void *data)
                 LOGE("MSM_CAM_IOCTL_GETFRAME error %s", strerror(errno));
             pthread_mutex_unlock(&mutex_camframe);
         } else {
-            iLog("frame is not ready! select returns %d", ret);
+            iLog("frame is not ready!");
             usleep(100000);
         }
     }
 
     return NULL;
 }
-
-#if 0
-void QualcommCameraHardware::runFrameThread(void *data)
-{
-    iLog("runFrameThread E");
-
-#if DLOPEN_LIBMMCAMERA
-    // We need to maintain a reference to libmmcamera.so for the duration of the
-    // frame thread, because we do not know when it will exit relative to the
-    // lifetime of this object.  We do not want to dlclose() libmmcamera while
-    // LINK_cam_frame is still running.
-    void *libhandle = ::dlopen("libmmcamera.so", RTLD_NOW);
-    iLog("FRAME: loading libmmcamera at %p", libhandle);
-    if (!libhandle) {
-        LOGE("FATAL ERROR: could not dlopen libmmcamera.so: %s", dlerror());
-    }
-    if (libhandle)
-#endif
-    {
-        cam_frame_click((msm_frame_t *)data);
-    }
-
-#if DLOPEN_LIBMMCAMERA
-    if (libhandle) {
-        ::dlclose(libhandle);
-        iLog("FRAME: dlclose(libmmcamera)");
-    }
-#endif
-
-    mFrameThreadWaitLock.lock();
-    mFrameThreadRunning = false;
-    mFrameThreadWait.signal();
-    mFrameThreadWaitLock.unlock();
-
-    iLog("runFrameThread X");
-}
-
-void *frame_thread(void *user)
-{
-    iLog("frame_thread E");
-    sp<QualcommCameraHardware> obj = QualcommCameraHardware::getInstance();
-    if (obj != 0) {
-        obj->runFrameThread(user);
-    }
-    else LOGW("not starting frame thread: the object went away!");
-    iLog("frame_thread X");
-    return NULL;
-}
-#endif
 
 void QualcommCameraHardware::runJpegEncodeThread(void *data)
 {
@@ -1044,8 +999,6 @@ bool QualcommCameraHardware::initPreview()
                 iLog("set preview callback");
                 LINK_cam_set_frame_callback();
 
-                // TODO: memset(*s, 0, 0x14)
-
                 mFrameThreadRunning = !pthread_create(&mFrameThread,
                                                       NULL,
                                                       cam_frame_click, //frame_thread,
@@ -1181,7 +1134,7 @@ bool QualcommCameraHardware::initRaw(bool initJpegHeap)
     if (initJpegHeap) {
         iLog("initRaw: initializing mJpegHeap.");
         mJpegHeap =
-            new AshmemPool(6291456,
+            new AshmemPool(mJpegMaxSize,
                            kJpegBufferCount,
                            0, // we do not know how big the picture wil be
                            0,
@@ -1269,8 +1222,8 @@ void QualcommCameraHardware::release()
     close(mCameraControlFd);
     mCameraControlFd = -1;
 
-    close(fd_frame);
-    fd_frame = -1;
+    close(framefd);
+    framefd = -1;
 
 #if DLOPEN_LIBMMCAMERA
     if (libmmcamera) {
@@ -1486,6 +1439,8 @@ void QualcommCameraHardware::runSnapshotThread(void *data)
 {
     iLog("runSnapshotThread E");
 
+    // TODO: support 2M/1M picture sizes
+
     if (native_start_snapshot(mCameraControlFd))
         receiveRawPicture();
     else
@@ -1555,32 +1510,6 @@ status_t QualcommCameraHardware::cancelPicture()
     return NO_ERROR;
 }
 
-#if 0
-void QualcommCameraHardware::initCameraParameters()
-{
-    LOGV("initCameraParameters: E");
-
-// FIXME
-#define SET_PARM(x, y) do {                                        \
-    iLog("initCameraParameters: set parm: %s, %d", #x, y);         \
-    native_set_parm(x, sizeof(y), (void *)&(y));                   \
-} while(0)
-
-    int32_t value;
-    value = getParm("effect", effect);
-    SET_PARM(CAMERA_SET_PARM_EFFECT, value);
-
-    value = getParm("whitebalance", whitebalance);
-    SET_PARM(CAMERA_SET_PARM_WB, value);
-
-    value = getParm("antibanding", antibanding);
-    SET_PARM(CAMERA_SET_PARM_ANTIBANDING, value);
-#undef SET_PARM
-
-    LOGV("initCameraParameters: X");
-}
-#endif
-
 status_t QualcommCameraHardware::setParameters(
         const CameraParameters& params)
 {
@@ -1598,7 +1527,7 @@ status_t QualcommCameraHardware::setParameters(
         // Validate the preview sizes
         size_t i;
         for (i = 0; i < PREVIEW_SIZE_COUNT; ++i, ++ps) {
-            iLog("requested size %dx%d, array %dx%d",
+            LOGV("requested size %dx%d, array %dx%d",
                 width, height, ps->width, ps->height);
             if (width == ps->width && height == ps->height)
                 break;
@@ -1638,11 +1567,15 @@ status_t QualcommCameraHardware::setParameters(
         else mDimension.ui_thumbnail_height = val;
     }
 
-    // Effect, WhiteBalance, AntiBanding...
-    //initCameraParameters();
-
     // setParameters
     mParameters = params;
+
+    if (mCameraRunning) {
+        setAntibanding();
+        setEffect();
+        setWhiteBalance();
+        //setZoom(); // only works in preview mode
+    }
 
     iLog("setParameters: X");
     return NO_ERROR;
@@ -1928,7 +1861,7 @@ void QualcommCameraHardware::setEffect()
     int32_t value = getParm("effect", effect);
     if (value != NOT_FOUND) {
         native_set_parm(CAMERA_SET_PARM_EFFECT, sizeof(value), (void *)&value);
-    }    
+    }
 }
 
 void QualcommCameraHardware::setWhiteBalance()
@@ -1941,9 +1874,22 @@ void QualcommCameraHardware::setWhiteBalance()
 
 void QualcommCameraHardware::setAntibanding()
 {
-    camera_antibanding_type value =
-        (camera_antibanding_type) getParm("antibanding", antibanding);
-    native_set_parm(CAMERA_SET_PARM_ANTIBANDING, sizeof(value), (void *)&value);
+    int32_t value = getParm("antibanding", antibanding);
+    if (value != NOT_FOUND) {
+        native_set_parm(CAMERA_SET_PARM_ANTIBANDING, sizeof(value), (void *)&value);
+    }
+}
+
+void QualcommCameraHardware::setZoom()
+{
+    int32_t level = mParameters.getInt("zoom");
+    iLog("Set Zoom level: %d", level);
+
+    if (level != NOT_FOUND) {
+        int32_t value = 5 * level; // magnify
+        native_set_parm(CAMERA_SET_PARM_ZOOM, sizeof(value), (void *)&value);
+        usleep(30000);
+    }
 }
 
 QualcommCameraHardware::MemPool::MemPool(int buffer_size, int num_buffers,
