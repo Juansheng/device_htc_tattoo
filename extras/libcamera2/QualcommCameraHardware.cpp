@@ -72,8 +72,8 @@ extern "C" {
 #define DEFAULT_PICTURE_HEIGHT 1536
 
 #define THUMBNAIL_BUFFER_SIZE (THUMBNAIL_WIDTH * THUMBNAIL_HEIGHT * 3/2)
-#define DEFAULT_PREVIEW_SETTING 5
-#define DEFAULT_FRAMERATE 15
+#define DEFAULT_PREVIEW_SETTING 1
+#define DEFAULT_FRAMERATE 24
 #define PREVIEW_SIZE_COUNT (sizeof(preview_sizes)/sizeof(preview_size_type))
 
 #define NOT_FOUND -1
@@ -129,16 +129,10 @@ struct preview_size_type {
 };
 
 static preview_size_type preview_sizes[] = {
-    { 480, 320 }, // HVGA
-    { 432, 320 }, // 1.35-to-1, for photos. (Rounded up from 1.3333 to 1)
-    { 352, 288 }, // CIF
-    { 336, 244 },
-    { 320, 320 },
+    { 384, 288 }, // VIDEO
     { 320, 240 }, // QVGA
-    { 288, 192 },
-    { 240, 240 }, // QCIF
     { 240, 160 }, // SQVGA
-    { 176, 144 },
+    { 176, 144 }, // MMS
 };
 
 static int attr_lookup(const struct str_map *const arr, const char *name)
@@ -232,6 +226,7 @@ static void receive_jpeg_callback(jpeg_event_t status);
 
 static int camerafd;
 static int framefd;
+
 pthread_t w_thread;
 pthread_t jpegThread;
 
@@ -312,15 +307,15 @@ void QualcommCameraHardware::initDefaultParameters()
     p.set(CameraParameters::KEY_SUPPORTED_ANTIBANDING, antibanding_values);
     p.set(CameraParameters::KEY_SUPPORTED_EFFECTS, effect_values);
     p.set(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE, whitebalance_values);
-    p.set(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES, "2048x1536");
+    p.set(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES, "2048x1536,1600x1200,1024x768");
     p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES, "320x240,240x160,176x144");
     p.set(CameraParameters::KEY_SUPPORTED_FLASH_MODES, "off");
     p.set(CameraParameters::KEY_SUPPORTED_FOCUS_MODES, "fixed");
 
     p.set(CameraParameters::KEY_ZOOM_SUPPORTED, "true");
     p.set(CameraParameters::KEY_ZOOM, "0");
-    p.set(CameraParameters::KEY_MAX_ZOOM, "3"); // fix crash while zoom selected
-    p.set(CameraParameters::KEY_ZOOM_RATIOS, "100,200,300,400");
+    p.set(CameraParameters::KEY_MAX_ZOOM, "6");
+    p.set(CameraParameters::KEY_ZOOM_RATIOS, "100,150,200,250,300,350,400"); // guess
 
     if (setParameters(p) != NO_ERROR) {
         LOGE("Failed to set default parameters?!");
@@ -588,6 +583,32 @@ static bool native_start_preview(int camfd)
         return false;
     }
 
+    return true;
+}
+
+static bool native_get_maxzoom(int camfd, void *pZm)
+{
+    iLog("native_get_maxzoom E");
+
+    struct msm_ctrl_cmd_t ctrlCmd;
+    int32_t *pZoom = (int32_t *)pZm;
+
+    ctrlCmd.type       = CAMERA_GET_PARM_MAXZOOM;
+    ctrlCmd.timeout_ms = 5000;
+    ctrlCmd.length     = sizeof(int32_t);
+    ctrlCmd.value      = pZoom;
+
+    if (ioctl(camfd, MSM_CAM_IOCTL_CTRL_COMMAND, &ctrlCmd) < 0) {
+        LOGE("native_get_maxzoom: ioctl fd %d error %s",
+             camfd,
+             strerror(errno));
+        return false;
+    }
+
+    iLog("maxZoom is %d", *(int32_t *)ctrlCmd.value);
+    memcpy(pZoom, (int32_t *)ctrlCmd.value, sizeof(int32_t));
+
+    iLog("native_get_maxzoom X");
     return true;
 }
 
@@ -931,11 +952,9 @@ bool QualcommCameraHardware::initPreview()
             frames[cnt].fd = mPreviewHeap->mHeap->getHeapID();
             // virtual addrs(buffer) of 4 frames wouldn't be changed in Donut dmesg
             frames[cnt].buffer = (uint32_t)mPreviewHeap->mHeap->base();
-            // y_off and cbcr_off confirmed in Donut(just for 240x160)
             // math operations found in assembled codes
-            frames[cnt].y_off = cnt * (0x6400 << 1);
-            frames[cnt].cbcr_off = cnt * (0x6400 << 1) +
-                mDimension.display_width * mDimension.display_height;
+            frames[cnt].y_off = 0;
+            frames[cnt].cbcr_off = mPreviewWidth * mPreviewHeight;
 
             if (frames[cnt].buffer == 0) {
                 iLog("frames[%d].buffer: malloc failed!", cnt);
@@ -1529,7 +1548,7 @@ status_t QualcommCameraHardware::setParameters(
         setAntibanding();
         setEffect();
         setWhiteBalance();
-        //setZoom(); // only works in preview mode
+        setZoom();
     }
 
     iLog("setParameters: X");
@@ -1835,15 +1854,21 @@ void QualcommCameraHardware::setAntibanding()
     }
 }
 
+static int32_t maxZoom = -1;
 void QualcommCameraHardware::setZoom()
 {
     int32_t level = mParameters.getInt("zoom");
-    iLog("Set Zoom level: %d", level);
 
-    if (level != NOT_FOUND) {
-        int32_t value = 5 * level; // magnify
-        native_set_parm(CAMERA_SET_PARM_ZOOM, sizeof(value), (void *)&value);
-        usleep(30000);
+    if (maxZoom == -1) { // init
+        if (!native_get_maxzoom(mCameraControlFd, (void *)&maxZoom)) // 0x1E
+            LOGE("native_get_maxzoom failed %s", strerror(errno));
+    } else {
+        iLog("Set Zoom level: %d", level);
+        int32_t value = level * 2;
+        if (value >= 0 && value <= maxZoom) {
+            native_set_parm(CAMERA_SET_PARM_ZOOM, sizeof(value), (void *)&value);
+            usleep(30000);
+        }
     }
 }
 

@@ -35,6 +35,7 @@ extern "C" {
 
 #define CAMERA_SET_PARM_DIMENSION 1
 #define CAMERA_SET_PARM_ZOOM 2
+#define CAMERA_GET_PARM_MAXZOOM 47
 #define CAMERA_SET_PARM_WB 14
 #define CAMERA_SET_PARM_EFFECT 15
 #define CAMERA_SET_PARM_ANTIBANDING 21
@@ -217,7 +218,7 @@ private:
        for preview and raw, and need to be updated when libmmcamera
        changes.
     */
-    static const int kPreviewBufferCount = 2;
+    static const int kPreviewBufferCount = 4;
     static const int kRawBufferCount = 1;
     static const int kJpegBufferCount = 1;
     static const int kRawFrameHeaderSize = 0;
