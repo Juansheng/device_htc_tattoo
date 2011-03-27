@@ -311,6 +311,8 @@ void QualcommCameraHardware::initDefaultParameters()
     p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES, "320x240,240x160,176x144");
     p.set(CameraParameters::KEY_SUPPORTED_FLASH_MODES, "off");
     p.set(CameraParameters::KEY_SUPPORTED_FOCUS_MODES, "fixed");
+    p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS, "yuv420sp");
+    p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_FRAME_RATES, "24,15,10");
 
     p.set(CameraParameters::KEY_ZOOM_SUPPORTED, "true");
     p.set(CameraParameters::KEY_ZOOM, "0");
