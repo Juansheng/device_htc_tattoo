@@ -1718,7 +1718,7 @@ index 9cdd779..de1a7c1 100644
                  android:configChanges="orientation|keyboardHidden"
                  android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
 diff --git a/src/com/android/camera/Camera.java b/src/com/android/camera/Camera.java
-index f0d38af..a394e9d 100644
+index f0d38af..a27b683 100644
 --- a/src/com/android/camera/Camera.java
 +++ b/src/com/android/camera/Camera.java
 @@ -89,7 +89,9 @@ import java.util.Collections;
@@ -1740,7 +1740,15 @@ index f0d38af..a394e9d 100644
  
      private GLRootView mGLRootView;
  
-@@ -641,7 +644,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -422,7 +425,6 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+ 
+         // Maximum zoom value may change after preview size is set. Get the
+         // latest parameters here.
+-        mParameters = mCameraDevice.getParameters();
+         mZoomMax = mParameters.getMaxZoom();
+         mSmoothZoomSupported = mParameters.isSmoothZoomSupported();
+         mGestureDetector = new GestureDetector(this, new ZoomGestureListener());
+@@ -641,7 +643,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
              Log.v(TAG, "mPictureDisplayedToJpegCallbackTime = "
                      + mPictureDisplayedToJpegCallbackTime + "ms");
              mHeadUpDisplay.setEnabled(true);
@@ -1749,7 +1757,7 @@ index f0d38af..a394e9d 100644
              if (!mIsImageCaptureIntent) {
                  // We want to show the taken picture for a while, so we wait
                  // for at least 1.2 second before restarting the preview.
-@@ -856,7 +859,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -856,7 +858,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
  
          public void onSnap() {
              // If we are already in the middle of taking a snapshot then ignore.
@@ -1758,17 +1766,17 @@ index f0d38af..a394e9d 100644
                  return;
              }
              mCaptureStartTime = System.currentTimeMillis();
-@@ -906,27 +909,26 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -906,27 +908,26 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
      public void onCreate(Bundle icicle) {
          super.onCreate(icicle);
  
 -        setContentView(R.layout.camera);
 -        mSurfaceView = (SurfaceView) findViewById(R.id.camera_preview);
--
--        mPreferences = PreferenceManager.getDefaultSharedPreferences(this);
--        CameraSettings.upgradePreferences(mPreferences);
 +        devlatch = new CountDownLatch(1);
  
+-        mPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+-        CameraSettings.upgradePreferences(mPreferences);
+-
 -        mQuickCapture = getQuickCaptureSettings();
 -
 -        // comment out -- unused now.
@@ -1797,7 +1805,7 @@ index f0d38af..a394e9d 100644
                      startPreview();
                  } catch (CameraHardwareException e) {
                      // In eng build, we throw the exception so that test tool
-@@ -940,6 +942,23 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -940,6 +941,23 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
          });
          startPreviewThread.start();
  
@@ -1821,7 +1829,7 @@ index f0d38af..a394e9d 100644
          // don't set mSurfaceHolder here. We have it set ONLY within
          // surfaceChanged / surfaceDestroyed, other parts of the code
          // assume that when it is set, the surface is also set.
-@@ -978,6 +997,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+@@ -978,6 +996,7 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
          } catch (InterruptedException ex) {
              // ignore
          }
@@ -1829,6 +1837,41 @@ index f0d38af..a394e9d 100644
      }
  
      private void changeHeadUpDisplayState() {
+@@ -1679,6 +1698,12 @@ public class Camera extends NoSearchActivity implements View.OnClickListener,
+         mPreviewing = true;
+         mZoomState = ZOOM_STOPPED;
+         mStatus = IDLE;
++
++        /* Get the correct max zoom value, as this varies with
++        * preview size/picture resolution
++        */
++        mParameters = mCameraDevice.getParameters();
++        mZoomMax = mParameters.getMaxZoom();
+     }
+ 
+     private void stopPreview() {
+diff --git a/src/com/android/camera/VideoCamera.java b/src/com/android/camera/VideoCamera.java
+index 0e04e31..5dbfee1 100644
+--- a/src/com/android/camera/VideoCamera.java
++++ b/src/com/android/camera/VideoCamera.java
+@@ -394,6 +394,7 @@ public class VideoCamera extends NoSearchActivity
+     private void finalizeHeadUpDisplay() {
+         mHeadUpDisplay.collapse();
+         ((ViewGroup) mGLRootView.getParent()).removeView(mGLRootView);
++        mHeadUpDisplay = null;
+         mGLRootView = null;
+     }
+ 
+@@ -1225,7 +1226,8 @@ public class VideoCamera extends NoSearchActivity
+                 } catch (RuntimeException e) {
+                     Log.e(TAG, "stop fail: " + e.getMessage());
+                 }
+-                mHeadUpDisplay.setEnabled(true);
++                if (mHeadUpDisplay != null)
++                    mHeadUpDisplay.setEnabled(true);
+                 mCurrentVideoFilename = mCameraVideoFilename;
+                 Log.v(TAG, "Setting current video filename: "
+                         + mCurrentVideoFilename);
 diff --git a/src/com/android/camera/ui/GLRootView.java b/src/com/android/camera/ui/GLRootView.java
 index d8ae0f8..04e7138 100644
 --- a/src/com/android/camera/ui/GLRootView.java
@@ -1864,6 +1907,19 @@ index 8219079..c71405e 100644
      }
  
      public void setContent(GLView content) {
+diff --git a/src/com/android/camera/ui/ZoomController.java b/src/com/android/camera/ui/ZoomController.java
+index 063237f..74d6b66 100644
+--- a/src/com/android/camera/ui/ZoomController.java
++++ b/src/com/android/camera/ui/ZoomController.java
+@@ -85,7 +85,7 @@ public class ZoomController extends GLView {
+         invalidate();
+ 
+         int index = mRatios.length - 1 - (int)
+-                ((position - mSliderTop) /  mValueGap + .5f);
++                ((float)(position - mSliderTop) /  mValueGap + .5f);
+         if (index != mIndex || !isMoving) {
+             mIndex = index;
+             if (mZoomListener != null) {
 
 project packages/apps/Gallery/
 diff --git a/AndroidManifest.xml b/AndroidManifest.xml
@@ -2159,6 +2215,47 @@ index c337c30..976698c 100644
          }
  
          awakenScrollBars(duration);
+
+project packages/apps/Phone/
+diff --git a/src/com/android/phone/CallNotifier.java b/src/com/android/phone/CallNotifier.java
+index 1c15123..e028859 100755
+--- a/src/com/android/phone/CallNotifier.java
++++ b/src/com/android/phone/CallNotifier.java
+@@ -172,6 +172,9 @@ public class CallNotifier extends Handler
+     // Cached AudioManager
+     private AudioManager mAudioManager;
+ 
++    // Vibrate when connection and disconnection
++    private static Vibrator mVibrator = new Vibrator();
++
+     public CallNotifier(PhoneApp app, Phone phone, Ringer ringer,
+                         BluetoothHandsfree btMgr, CallLogAsync callLog) {
+         mApplication = app;
+@@ -649,6 +652,13 @@ public class CallNotifier extends Handler
+                 }
+             }
+ 
++            Call call = mPhone.getForegroundCall();
++            Connection cc = call.getLatestConnection();
++            Call.State cstate = call.getState();
++            if (cstate == Call.State.ACTIVE && !cc.isIncoming())
++                if (cc.getDurationMillis() < 200)
++                    mVibrator.vibrate(100);
++
+             // if the call screen is showing, let it handle the event,
+             // otherwise handle it here.
+             if (!mApplication.isShowingCallScreen()) {
+@@ -853,6 +863,10 @@ public class CallNotifier extends Handler
+                 + ", date = " + c.getCreateTime());
+         }
+ 
++        if (c != null)
++            if (c.getDurationMillis() > 0)
++                mVibrator.vibrate(100);
++
+         // Stop the ringer if it was ringing (for an incoming call that
+         // either disconnected by itself, or was rejected by the user.)
+         //
 
 project packages/apps/SoundRecorder/
 diff --git a/AndroidManifest.xml b/AndroidManifest.xml
