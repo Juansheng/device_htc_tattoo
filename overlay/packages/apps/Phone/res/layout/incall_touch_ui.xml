@@ -119,8 +119,9 @@
 
             <LinearLayout android:id="@+id/inCallControlsRow1"
                           android:orientation="horizontal"
-                          android:layout_width="match_parent"
+                          android:layout_width="fill_parent"
                           android:layout_height="wrap_content"
+                          android:layout_marginBottom="-4dip"
                           >
                 <!-- The buttons in the top row all have an icon *and* a
                      text label, so we use a <Button> with a "top"
@@ -191,8 +192,9 @@
             </LinearLayout>
             <LinearLayout android:id="@+id/inCallControlsRow2"
                           android:orientation="horizontal"
-                          android:layout_width="match_parent"
+                          android:layout_width="fill_parent"
                           android:layout_height="wrap_content"
+                          android:layout_marginBottom="-4dip"
                           >
                 <!-- "Bluetooth" -->
                 <ToggleButton android:id="@+id/bluetoothButton"

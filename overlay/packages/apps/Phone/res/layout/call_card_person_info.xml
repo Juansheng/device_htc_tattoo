@@ -37,7 +37,7 @@
              adds a white border around the image (and a shadow around
              the white border.) -->
         <ImageView android:id="@+id/photo"
-                   android:layout_width="172dp"
+                   android:layout_width="152dp"
                    android:layout_height="146dp"
                    android:layout_centerHorizontal="true"
                    android:background="@drawable/incall_photo_border_lg"
@@ -77,14 +77,14 @@
     <TextView android:id="@+id/name"
               android:gravity="center_horizontal"
               android:textAppearance="?android:attr/textAppearanceLarge"
-              android:textSize="28sp"
+              android:textSize="22sp"
               android:singleLine="true"
               android:layout_width="wrap_content"
               android:layout_height="wrap_content"
               android:layout_marginTop="-22dip"
               android:paddingLeft="4dip"
               android:paddingRight="4dip"
-              android:paddingBottom="4dip"
+              android:paddingBottom="0dip"
               />
 
     <!-- Organization, if we set it shown. -->
@@ -108,7 +108,7 @@
                   android:layout_marginTop="-6dip">
         <TextView android:id="@+id/label"
                   android:textAppearance="?android:attr/textAppearanceSmall"
-                  android:textSize="18sp"
+                  android:textSize="14sp"
                   android:textColor="?android:attr/textColorSecondary"
                   android:singleLine="true"
                   android:layout_width="wrap_content"
@@ -117,7 +117,7 @@
                   />
         <TextView android:id="@+id/phoneNumber"
                   android:textAppearance="?android:attr/textAppearanceSmall"
-                  android:textSize="18sp"
+                  android:textSize="14sp"
                   android:textColor="?android:attr/textColorSecondary"
                   android:singleLine="true"
                   android:layout_width="wrap_content"
