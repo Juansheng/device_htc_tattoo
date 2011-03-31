@@ -40,17 +40,14 @@ ro.ril.def.agps.mode=2
 # For no auto focus devices
 ro.workaround.noautofocus=1
 
-# default value of brightness
+# Default value of brightness
 settings.display.brightness=102
-
-# Disable JIT for Tattoo
-dalvik.vm.execution-mode=int:fast
 
 # The OpenGL ES API level, 1.0 here
 ro.opengles.version=65536
 
-# Make scrolling smoother(Exp)
-windowsmgr.max_events_per_sec=260
+# Make scrolling smoother
+windowsmgr.max_events_per_sec=60
 
 # Active stagefright
 media.stagefright.enable-http=true
