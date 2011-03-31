@@ -52,6 +52,10 @@ extern "C" {
 
 #define PAD_TO_WORD(x) ((x&1) ? x+1 : x)
 
+#define SHOT_3M_SIZE 1
+#define SHOT_2M_SIZE 2
+#define SHOT_1M_SIZE 3
+
 typedef enum
 {
     CAMERA_WB_MIN_MINUS_1,

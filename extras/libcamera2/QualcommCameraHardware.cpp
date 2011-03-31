@@ -58,7 +58,7 @@ extern "C" {
 
 #include "msm_camera.h" // Tattoo kernel
 
-#define REVISION "0.4"
+#define REVISION "0.5"
 
 // init for Tattoo
 #define THUMBNAIL_WIDTH_STR   "192"
@@ -68,12 +68,12 @@ extern "C" {
 #define THUMBNAIL_HEIGHT       144
 
 // actual px for snapshoting
-#define DEFAULT_PICTURE_WIDTH  2048
-#define DEFAULT_PICTURE_HEIGHT 1536
+#define DEFAULT_PICTURE_WIDTH  1600
+#define DEFAULT_PICTURE_HEIGHT 1200
 
 #define THUMBNAIL_BUFFER_SIZE (THUMBNAIL_WIDTH * THUMBNAIL_HEIGHT * 3/2)
 #define DEFAULT_PREVIEW_SETTING 1
-#define DEFAULT_FRAMERATE 24
+#define DEFAULT_FRAMERATE 15
 #define PREVIEW_SIZE_COUNT (sizeof(preview_sizes)/sizeof(preview_size_type))
 
 #define NOT_FOUND -1
@@ -195,12 +195,21 @@ static char *effect_values;
 // from qcamera/common/camera.h
 static const str_map antibanding[] = {
     { "off",  CAMERA_ANTIBANDING_OFF },
-    { "50hz",  CAMERA_ANTIBANDING_50HZ },
-    { "60hz",  CAMERA_ANTIBANDING_60HZ },
-    { "auto",  CAMERA_ANTIBANDING_AUTO },
+    { "50hz", CAMERA_ANTIBANDING_50HZ },
+    { "60hz", CAMERA_ANTIBANDING_60HZ },
+    { "auto", CAMERA_ANTIBANDING_AUTO },
     { NULL, 0 }
 };
 static char *antibanding_values;
+
+// 3M/2M/1M capture
+static const str_map picturesize[] = {
+    { "2048x1536", SHOT_3M_SIZE },
+    { "1600x1200", SHOT_2M_SIZE },
+    { "1024x768",  SHOT_1M_SIZE },
+    { NULL, 0 }
+};
+static char *picturesize_values;
 
 // round to the next power of two
 static inline unsigned clp2(unsigned x)
@@ -226,7 +235,6 @@ static void receive_jpeg_callback(jpeg_event_t status);
 
 static int camerafd;
 static int framefd;
-
 pthread_t w_thread;
 pthread_t jpegThread;
 
@@ -303,6 +311,7 @@ void QualcommCameraHardware::initDefaultParameters()
     INIT_VALUES_FOR(antibanding);
     INIT_VALUES_FOR(effect);
     INIT_VALUES_FOR(whitebalance);
+    INIT_VALUES_FOR(picturesize);
 
     p.set(CameraParameters::KEY_SUPPORTED_ANTIBANDING, antibanding_values);
     p.set(CameraParameters::KEY_SUPPORTED_EFFECTS, effect_values);
@@ -316,8 +325,8 @@ void QualcommCameraHardware::initDefaultParameters()
 
     p.set(CameraParameters::KEY_ZOOM_SUPPORTED, "true");
     p.set(CameraParameters::KEY_ZOOM, "0");
-    p.set(CameraParameters::KEY_MAX_ZOOM, "6");
-    p.set(CameraParameters::KEY_ZOOM_RATIOS, "100,150,200,250,300,350,400"); // guess
+    p.set(CameraParameters::KEY_MAX_ZOOM, "4");
+    p.set(CameraParameters::KEY_ZOOM_RATIOS, "100,150,200,250,300");
 
     if (setParameters(p) != NO_ERROR) {
         LOGE("Failed to set default parameters?!");
@@ -435,7 +444,7 @@ void QualcommCameraHardware::startCamera()
 
     mCameraControlFd = camerafd;
 
-    // maintain a fd for cam_frame later
+    // maintain a fd for frame thread later
     framefd = open(MSM_CAMERA_CONTROL, O_RDWR);
     if (framefd < 0)
         LOGE("cam_frame: cannot open %s: %s", MSM_CAMERA_CONTROL, strerror(errno));
@@ -1486,6 +1495,7 @@ status_t QualcommCameraHardware::cancelPicture()
     return NO_ERROR;
 }
 
+static int ZOOM_STEP;
 status_t QualcommCameraHardware::setParameters(
         const CameraParameters& params)
 {
@@ -1550,7 +1560,26 @@ status_t QualcommCameraHardware::setParameters(
         setAntibanding();
         setEffect();
         setWhiteBalance();
-        setZoom();
+
+        // a dirty hack to prevent blank screen
+        int32_t size = getParm("picture-size", picturesize);
+        if (size != NOT_FOUND) {
+            switch (size) {
+                case SHOT_3M_SIZE:
+                    ZOOM_STEP = 0;
+                    break;
+                case SHOT_2M_SIZE:
+                    ZOOM_STEP = 2;
+                    break;
+                case SHOT_1M_SIZE:
+                    ZOOM_STEP = 4;
+                    break;
+                default:
+                    ZOOM_STEP = 0;
+                    LOGE("requested wrong picture-size");
+            }
+            setZoom();
+        }
     }
 
     iLog("setParameters: X");
@@ -1862,11 +1891,11 @@ void QualcommCameraHardware::setZoom()
     int32_t level = mParameters.getInt("zoom");
 
     if (maxZoom == -1) { // init
-        if (!native_get_maxzoom(mCameraControlFd, (void *)&maxZoom)) // 0x1E
+        if (!native_get_maxzoom(mCameraControlFd, (void *)&maxZoom))
             LOGE("native_get_maxzoom failed %s", strerror(errno));
     } else {
-        iLog("Set Zoom level: %d", level);
-        int32_t value = level * 2;
+        LOGV("Set Zoom level: %d", level);
+        int32_t value = level * ZOOM_STEP;
         if (value >= 0 && value <= maxZoom) {
             native_set_parm(CAMERA_SET_PARM_ZOOM, sizeof(value), (void *)&value);
             usleep(30000);
