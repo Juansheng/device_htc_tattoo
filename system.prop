@@ -51,7 +51,7 @@ windowsmgr.max_events_per_sec=60
 
 # Active stagefright
 media.stagefright.enable-http=true
-media.stagefright.enable-player=true
 media.stagefright.enable-meta=true
+media.stagefright.enable-player=true
 media.stagefright.enable-record=true
 media.stagefright.enable-scan=true

@@ -97,7 +97,7 @@
                    bitRate="192000"
                    width="176"
                    height="144"
-                   frameRate="20" />
+                   frameRate="15" />
 
             <Audio codec="amrnb"
                    bitRate="12200"
@@ -147,6 +147,6 @@
         for TEST applications. For other applications, we do
         not perform any checks at all.
     -->
-    <VideoDecoderCap name="wmv" enabled="true"/>
-    <AudioDecoderCap name="wma" enabled="true"/>
+    <VideoDecoderCap name="wmv" enabled="false"/>
+    <AudioDecoderCap name="wma" enabled="false"/>
 </MediaSettings>
