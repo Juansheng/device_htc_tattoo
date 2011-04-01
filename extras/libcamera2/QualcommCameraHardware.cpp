@@ -90,7 +90,6 @@ unsigned char (*LINK_jpeg_encoder_encode)(const char* file_name, const cam_ctrl_
                                   const unsigned char* snapshotbuf, int snapshotfd,
                                   common_crop_t *cropInfo);
 int  (*LINK_camframe_terminate)();
-void (*LINK_cam_set_frame_callback)();
 bool (*LINK_cam_release_frame)();
 int8_t (*LINK_jpeg_encoder_setMainImageQuality)(uint32_t quality);
 int8_t (*LINK_jpeg_encoder_setThumbnailQuality)(uint32_t quality);
@@ -109,7 +108,6 @@ void  (**LINK_mmcamera_jpeg_callback)(jpeg_event_t status);
 #define LINK_jpeg_encoder_join jpeg_encoder_join
 #define LINK_jpeg_encoder_encode jpeg_encoder_encode
 #define LINK_camframe_terminate camframe_terminate
-#define LINK_cam_set_frame_callback cam_set_frame_callback
 #define LINK_cam_release_frame cam_release_frame
 #define LINK_jpeg_encoder_setMainImageQuality jpeg_encoder_setMainImageQuality
 #define LINK_jpeg_encoder_setThumbnailQuality jpeg_encoder_setThumbnailQuality
@@ -402,13 +400,12 @@ void QualcommCameraHardware::startCamera()
     *(void **)&LINK_mmcamera_camframe_callback =
         ::dlsym(libmmcamera, "mmframe_cb");
     *LINK_mmcamera_camframe_callback = receive_camframe_callback;
+    *(void **)&LINK_cam_set_frame_callback =
+        ::dlsym(libmmcamera, "cam_set_frame_callback");
 #endif
 
     *(void **)&LINK_jpeg_encoder_init =
         ::dlsym(libmmcamera, "jpeg_encoder_init");
-
-    *(void **)&LINK_cam_set_frame_callback =
-        ::dlsym(libmmcamera, "cam_set_frame_callback");
 
     *(void **)&LINK_cam_release_frame =
         ::dlsym(libmmcamera, "cam_release_frame");
@@ -447,7 +444,8 @@ void QualcommCameraHardware::startCamera()
     // maintain a fd for frame thread later
     framefd = open(MSM_CAMERA_CONTROL, O_RDWR);
     if (framefd < 0)
-        LOGE("cam_frame: cannot open %s: %s", MSM_CAMERA_CONTROL, strerror(errno));
+        LOGE("cam_frame: cannot open %s: %s",
+            MSM_CAMERA_CONTROL, strerror(errno));
 
     if (!LINK_jpeg_encoder_init()) {
         LOGE("jpeg_encoding_init failed.");
@@ -951,9 +949,6 @@ bool QualcommCameraHardware::initPreview()
         return false;
     }
 
-    mDimension.picture_width = DEFAULT_PICTURE_WIDTH;
-    mDimension.picture_height = DEFAULT_PICTURE_HEIGHT;
-
     unsigned char activeBuffer;
 
     // (sizeof(mDimension) == 0x70) found in assembled codes
@@ -961,9 +956,8 @@ bool QualcommCameraHardware::initPreview()
     if (native_set_dimension(&mDimension)) {
         for (int cnt = 0; cnt < kPreviewBufferCount; cnt++) {
             frames[cnt].fd = mPreviewHeap->mHeap->getHeapID();
-            // virtual addrs(buffer) of 4 frames wouldn't be changed in Donut dmesg
+            // vaddrs(buffer) of 4 frames not changed in Donut dmesg
             frames[cnt].buffer = (uint32_t)mPreviewHeap->mHeap->base();
-            // math operations found in assembled codes
             frames[cnt].y_off = 0;
             frames[cnt].cbcr_off = mPreviewWidth * mPreviewHeight;
 
@@ -983,9 +977,6 @@ bool QualcommCameraHardware::initPreview()
                                          activeBuffer);
 
             if (cnt == kPreviewBufferCount - 1) {
-                iLog("set preview callback");
-                LINK_cam_set_frame_callback();
-
                 mFrameThreadRunning = !pthread_create(&mFrameThread,
                                                       NULL,
                                                       cam_frame_click,
@@ -1565,18 +1556,15 @@ status_t QualcommCameraHardware::setParameters(
         int32_t size = getParm("picture-size", picturesize);
         if (size != NOT_FOUND) {
             switch (size) {
-                case SHOT_3M_SIZE:
-                    ZOOM_STEP = 0;
-                    break;
                 case SHOT_2M_SIZE:
                     ZOOM_STEP = 2;
                     break;
                 case SHOT_1M_SIZE:
                     ZOOM_STEP = 4;
                     break;
+                case SHOT_3M_SIZE:
                 default:
                     ZOOM_STEP = 0;
-                    LOGE("requested wrong picture-size");
             }
             setZoom();
         }
@@ -1891,10 +1879,14 @@ void QualcommCameraHardware::setZoom()
     int32_t level = mParameters.getInt("zoom");
 
     if (maxZoom == -1) { // init
-        if (!native_get_maxzoom(mCameraControlFd, (void *)&maxZoom))
+        if (!native_get_maxzoom(mCameraControlFd, (void *)&maxZoom)) {
             LOGE("native_get_maxzoom failed %s", strerror(errno));
-    } else {
-        LOGV("Set Zoom level: %d", level);
+            return;
+        }
+    }
+
+    LOGV("Set Zoom level: %d", level);
+    if (ZOOM_STEP != 0) {
         int32_t value = level * ZOOM_STEP;
         if (value >= 0 && value <= maxZoom) {
             native_set_parm(CAMERA_SET_PARM_ZOOM, sizeof(value), (void *)&value);
