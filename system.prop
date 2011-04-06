@@ -34,7 +34,7 @@ view.scroll_friction=0.008
 # For SD storage insert notification sound
 persist.service.mount.playsnd=0
 
-# For the agps default value
+# Enable insecure AGPS
 ro.ril.def.agps.mode=2
 
 # For no auto focus devices
