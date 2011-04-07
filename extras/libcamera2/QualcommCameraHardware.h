@@ -43,12 +43,8 @@ extern "C" {
 #define CAMERA_START_PREVIEW 39
 #define CAMERA_EXIT 43
 
-#define CAMERA_SET_PARM_AUTO_FOCUS 13
 #define CAMERA_START_SNAPSHOT 40
 #define CAMERA_STOP_SNAPSHOT 42 //41
-
-#define AF_MODE_AUTO 2
-#define CAMERA_AUTO_FOCUS_CANCEL 1 //204
 
 #define PAD_TO_WORD(x) ((x&1) ? x+1 : x)
 
@@ -208,8 +204,6 @@ private:
     virtual ~QualcommCameraHardware();
     status_t startPreviewInternal();
     void stopPreviewInternal();
-    friend void *auto_focus_thread(void *user);
-    void runAutoFocus();
     bool native_set_dimension (int camfd);
     bool native_jpeg_encode (void);
     bool native_set_parm(cam_ctrl_type type, uint16_t length, void *value);
@@ -335,6 +329,9 @@ private:
     void setWhiteBalance();
     void setZoom();
 
+    int mEffect;
+    int mWhiteBalance;
+    
     Mutex mLock;
     bool mReleasedRecordingFrame;
 
@@ -370,9 +367,6 @@ private:
 
     int mCameraControlFd;
     cam_ctrl_dimension_t mDimension;
-    bool mAutoFocusThreadRunning;
-    Mutex mAutoFocusThreadLock;
-    int mAutoFocusFd;
 
     pthread_t mCamConfigThread;
     pthread_t mFrameThread;
