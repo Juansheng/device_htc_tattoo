@@ -152,3 +152,12 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/lib/libOmxVidEnc.so:system/lib/libOmxVidEnc.so \
 	device/htc/tattoo/prebuilt/system/lib/libt9.so:system/lib/libt9.so
 
+# WITH_WINDOWS_MEDIA
+PRODUCT_COPY_FILES += \
+	device/htc/tattoo/prebuilt/system/etc/pvasflocal.cfg:system/etc/pvasflocal.cfg \
+	device/htc/tattoo/prebuilt/system/lib/libomx_wmadec_sharedlibrary.so:system/lib/libomx_wmadec_sharedlibrary.so \
+	device/htc/tattoo/prebuilt/system/lib/libomx_wmvdec_sharedlibrary.so:system/lib/libomx_wmvdec_sharedlibrary.so \
+	device/htc/tattoo/prebuilt/system/lib/libpvasfcommon.so:system/lib/libpvasfcommon.so \
+	device/htc/tattoo/prebuilt/system/lib/libpvasflocalpbreg.so:system/lib/libpvasflocalpbreg.so \
+	device/htc/tattoo/prebuilt/system/lib/libpvasflocalpb.so:system/lib/libpvasflocalpb.so
+
