@@ -98,7 +98,7 @@ PRODUCT_COPY_FILES += \
     device/htc/tattoo/prebuilt/system/etc/init.d/00sysctl:system/etc/init.d/00sysctl \
     device/htc/tattoo/prebuilt/system/etc/init.d/01dalvikcache:system/etc/init.d/01dalvikcache \
     device/htc/tattoo/prebuilt/system/etc/init.d/08compcache:system/etc/init.d/08compcache \
-    device/htc/tattoo/prebuilt/system/etc/init.d/20opt_and_fix:system/etc/init.d/20opt_and_fix \
+    device/htc/tattoo/prebuilt/system/etc/init.d/20optandfix:system/etc/init.d/20optandfix \
     device/htc/tattoo/prebuilt/system/etc/init.d/80userinit:system/etc/init.d/80userinit \
     device/htc/tattoo/prebuilt/system/etc/media_profiles.xml:/system/etc/media_profiles.xml \
     device/htc/tattoo/prebuilt/system/etc/passwd:system/etc/passwd \
@@ -123,7 +123,6 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/META-INF/com/google/android/update-binary:META-INF/com/google/android/update-binary \
 	device/htc/tattoo/prebuilt/META-INF/com/google/android/updater-script:META-INF/com/google/android/updater-script \
 	device/htc/tattoo/prebuilt/META-INF/com/android/metadata:META-INF/com/android/metadata \
-	device/htc/tattoo/prebuilt/system/app/HTCCalibrate.apk:system/app/HTCCalibrate.apk \
 	device/htc/tattoo/prebuilt/system/bin/akm8973:system/bin/akm8973 \
 	device/htc/tattoo/prebuilt/system/bin/backuptool.sh:system/bin/backuptool.sh \
 	device/htc/tattoo/prebuilt/system/bin/sysinit:system/bin/sysinit \

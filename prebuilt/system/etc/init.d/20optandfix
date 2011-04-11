@@ -1,0 +1,7 @@
+#!/system/bin/sh
+
+# - fix fb0 permissions for copybit while camera running
+chmod 666 /dev/graphics/fb0
+
+exit 0
+
