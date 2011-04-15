@@ -3,8 +3,5 @@
 # - fix fb0 permissions for copybit while camera running
 chmod 666 /dev/graphics/fb0
 
-# - fix pppd can't open /dev/ppp device issue
-chmod 4755 /system/bin/pppd
-
 exit 0
 
