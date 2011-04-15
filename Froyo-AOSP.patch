@@ -405,6 +405,153 @@ index a5b8b6f..b134a3f 100644
  {
 
 project development/
+diff --git a/apps/Development/AndroidManifest.xml b/apps/Development/AndroidManifest.xml
+index c4774c2..f505473 100644
+--- a/apps/Development/AndroidManifest.xml
++++ b/apps/Development/AndroidManifest.xml
+@@ -124,12 +124,14 @@
+             </intent-filter>
+         </activity>
+ 
++        <!--
+         <activity android:name="GLSTester" android:label="Google Login Service">
+             <intent-filter>
+                 <action android:name="android.intent.action.MAIN" />
+                 <category android:name="android.intent.category.TEST" />
+             </intent-filter>
+         </activity>
++        -->
+ 
+         <activity android:name="RunningProcesses" android:label="Running processes">
+             <intent-filter>
+diff --git a/apps/Development/res/layout/development_settings.xml b/apps/Development/res/layout/development_settings.xml
+index 16c2cdf..d6e5a0a 100644
+--- a/apps/Development/res/layout/development_settings.xml
++++ b/apps/Development/res/layout/development_settings.xml
+@@ -100,17 +100,19 @@
+             android:layout_alignParentLeft="true"
+             android:text="@string/development_settings_always_finish_text" />
+ 
++        <!--
+         <CheckBox android:id="@+id/show_cpu"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:layout_below="@id/always_finish"
+             android:layout_alignParentLeft="true"
+             android:text="@string/development_settings_show_cpu_text" />
++        -->
+ 
+         <CheckBox android:id="@+id/enable_gl"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+-            android:layout_below="@id/show_cpu"
++            android:layout_below="@id/always_finish"
+             android:layout_alignParentLeft="true"
+             android:text="@string/development_settings_enable_gl_text" />
+ 
+@@ -121,17 +123,19 @@
+             android:layout_alignParentLeft="true"
+             android:text="@string/development_settings_show_background_text" />
+ 
++        <!--
+         <CheckBox android:id="@+id/show_sleep"
+             android:layout_width="wrap_content"
+             android:layout_height="wrap_content"
+             android:layout_below="@id/show_background"
+             android:layout_alignParentLeft="true"
+             android:text="@string/development_settings_show_sleep_text" />
++        -->
+             
+         <Spinner android:id="@+id/window_animation_scale"
+             android:layout_width="match_parent"
+             android:layout_height="wrap_content"
+-            android:layout_below="@id/show_sleep"
++            android:layout_below="@id/show_background"
+             android:layout_alignParentLeft="true">
+         </Spinner>
+ 
+diff --git a/apps/Development/src/com/android/development/DevelopmentSettings.java b/apps/Development/src/com/android/development/DevelopmentSettings.java
+index c01ea59..6921ff8 100644
+--- a/apps/Development/src/com/android/development/DevelopmentSettings.java
++++ b/apps/Development/src/com/android/development/DevelopmentSettings.java
+@@ -54,11 +54,9 @@ public class DevelopmentSettings extends Activity {
+     private CheckBox mAlwaysFinishCB;
+     private Spinner mPointerLocationSpinner;
+     private CheckBox mShowLoadCB;
+-    private CheckBox mShowCpuCB;
+     private CheckBox mEnableGLCB;
+     private CheckBox mShowUpdatesCB;
+     private CheckBox mShowBackgroundCB;
+-    private CheckBox mShowSleepCB;
+     private CheckBox mShowXmppCB;
+     private CheckBox mCompatibilityModeCB;
+     private Spinner mMaxProcsSpinner;
+@@ -108,8 +106,6 @@ public class DevelopmentSettings extends Activity {
+         mPointerLocationSpinner.setAdapter(adapter);
+         mShowLoadCB = (CheckBox)findViewById(R.id.show_load);
+         mShowLoadCB.setOnClickListener(mShowLoadClicked);
+-        mShowCpuCB = (CheckBox)findViewById(R.id.show_cpu);
+-        mShowCpuCB.setOnCheckedChangeListener(new SurfaceFlingerClicker(1000));
+         mEnableGLCB = (CheckBox)findViewById(R.id.enable_gl);
+         mEnableGLCB.getLayoutParams().height = 0; // doesn't do anything
+         mEnableGLCB.setOnCheckedChangeListener(new SurfaceFlingerClicker(1004));
+@@ -117,8 +113,6 @@ public class DevelopmentSettings extends Activity {
+         mShowUpdatesCB.setOnCheckedChangeListener(new SurfaceFlingerClicker(1002));
+         mShowBackgroundCB = (CheckBox)findViewById(R.id.show_background);
+         mShowBackgroundCB.setOnCheckedChangeListener(new SurfaceFlingerClicker(1003));
+-        mShowSleepCB = (CheckBox)findViewById(R.id.show_sleep);
+-        mShowSleepCB.setOnClickListener(mShowSleepClicked);
+         mShowXmppCB = (CheckBox)findViewById(R.id.show_xmpp);
+         mShowXmppCB.setOnClickListener(mShowXmppClicked);
+         mCompatibilityModeCB = (CheckBox)findViewById(R.id.compatibility_mode);
+@@ -185,7 +179,6 @@ public class DevelopmentSettings extends Activity {
+         updateProcessLimitOptions();
+         updateSharedOptions();
+         updateFlingerOptions();
+-        updateSleepOptions();
+         updateXmppOptions();
+         updateCompatibilityOptions();
+ 
+@@ -287,7 +280,6 @@ public class DevelopmentSettings extends Activity {
+                 flinger.transact(1010, data, reply, 0);
+                 int v;
+                 v = reply.readInt();
+-                mShowCpuCB.setChecked(v != 0);
+                 v = reply.readInt();
+                 mEnableGLCB.setChecked(v != 0);
+                 v = reply.readInt();
+@@ -301,6 +293,7 @@ public class DevelopmentSettings extends Activity {
+         }
+     }
+ 
++/*
+     private void writeSleepOptions() {
+         try {
+             FileOutputStream os = new FileOutputStream(
+@@ -328,6 +321,7 @@ public class DevelopmentSettings extends Activity {
+         }
+         mShowSleepCB.setChecked(mShowSleep);
+     }
++*/
+ 
+     private void writeXmppOptions() {
+         Settings.System.setShowGTalkServiceStatus(getContentResolver(), mShowXmpp);
+@@ -425,6 +419,7 @@ public class DevelopmentSettings extends Activity {
+         final int mCode;
+     }
+ 
++/*
+     private View.OnClickListener mShowSleepClicked =
+             new View.OnClickListener() {
+         public void onClick(View v) {
+@@ -433,6 +428,7 @@ public class DevelopmentSettings extends Activity {
+             updateSleepOptions();
+         }
+     };
++*/
+ 
+     private View.OnClickListener mShowXmppClicked = new View.OnClickListener() {
+         public void onClick(View v) {
 diff --git a/apps/Term/AndroidManifest.xml b/apps/Term/AndroidManifest.xml
 index 7084d2c..6471eb5 100644
 --- a/apps/Term/AndroidManifest.xml
@@ -665,6 +812,21 @@ index 9d259f3..5c7a657 100644
  </parameter>
  </method>
  <method name="size"
+diff --git a/core/java/com/android/internal/app/ShutdownThread.java b/core/java/com/android/internal/app/ShutdownThread.java
+index a96253b..e35edc3 100644
+--- a/core/java/com/android/internal/app/ShutdownThread.java
++++ b/core/java/com/android/internal/app/ShutdownThread.java
+@@ -133,6 +133,10 @@ public final class ShutdownThread extends Thread {
+ 
+     private static void beginShutdownSequence(Context context) {
+         synchronized (sIsStartedGuard) {
++            if (sIsStarted) {
++                Log.d(TAG, "Shutdown sequence already running, returning.");
++                return;
++            }
+             sIsStarted = true;
+         }
+ 
 diff --git a/core/jni/Android.mk b/core/jni/Android.mk
 index df1ab9e..ba8983d 100644
 --- a/core/jni/Android.mk
