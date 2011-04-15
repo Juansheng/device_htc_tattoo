@@ -109,7 +109,7 @@ static preview_size_type preview_sizes[] = {
     { 384, 288 }, // VIDEO
     { 320, 240 }, // QVGA
     { 240, 160 }, // SQVGA
-    { 176, 144 }, // MMS
+    { 192, 144 }, // MMS
 };
 
 static int attr_lookup(const struct str_map *const arr, const char *name)
@@ -291,7 +291,7 @@ void QualcommCameraHardware::initDefaultParameters()
     p.set(CameraParameters::KEY_SUPPORTED_EFFECTS, effect_values);
     p.set(CameraParameters::KEY_SUPPORTED_WHITE_BALANCE, whitebalance_values);
     p.set(CameraParameters::KEY_SUPPORTED_PICTURE_SIZES, "2048x1536,1600x1200,1024x768");
-    p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES, "320x240,240x160,176x144");
+    p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_SIZES, "320x240,240x160,192x144");
     p.set(CameraParameters::KEY_SUPPORTED_FLASH_MODES, "off");
     p.set(CameraParameters::KEY_SUPPORTED_FOCUS_MODES, "fixed");
     p.set(CameraParameters::KEY_SUPPORTED_PREVIEW_FORMATS, "yuv420sp");

@@ -80,7 +80,7 @@
     <CamcorderProfiles>
 
         <EncoderProfile quality="high" fileFormat="3gp" duration="60">
-            <Video codec="h263"
+            <Video codec="m4v"
                    bitRate="320000"
                    width="384"
                    height="288"
@@ -95,7 +95,7 @@
         <EncoderProfile quality="low" fileFormat="3gp" duration="60">
             <Video codec="m4v"
                    bitRate="192000"
-                   width="176"
+                   width="192"
                    height="144"
                    frameRate="15" />
 
@@ -123,15 +123,9 @@
          In other words, the applications won't be able to use the codec
          or query the capabilities of the codec at all if it is disabled
     -->
-    <VideoEncoderCap name="h263" enabled="true"
-        minBitRate="192000" maxBitRate="420000"
-        minFrameWidth="176" maxFrameWidth="384"
-        minFrameHeight="144" maxFrameHeight="288"
-        minFrameRate="1" maxFrameRate="24" />
-
     <VideoEncoderCap name="m4v" enabled="true"
-        minBitRate="192000" maxBitRate="420000"
-        minFrameWidth="176" maxFrameWidth="384"
+        minBitRate="192000" maxBitRate="320000"
+        minFrameWidth="192" maxFrameWidth="384"
         minFrameHeight="144" maxFrameHeight="288"
         minFrameRate="1" maxFrameRate="24" />
 
