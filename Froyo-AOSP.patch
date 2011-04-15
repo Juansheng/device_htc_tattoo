@@ -2013,7 +2013,7 @@ index f0d38af..a27b683 100644
  
      private void stopPreview() {
 diff --git a/src/com/android/camera/VideoCamera.java b/src/com/android/camera/VideoCamera.java
-index 0e04e31..5dbfee1 100644
+index 0e04e31..6bb916f 100644
 --- a/src/com/android/camera/VideoCamera.java
 +++ b/src/com/android/camera/VideoCamera.java
 @@ -394,6 +394,7 @@ public class VideoCamera extends NoSearchActivity
@@ -2024,7 +2024,24 @@ index 0e04e31..5dbfee1 100644
          mGLRootView = null;
      }
  
-@@ -1225,7 +1226,8 @@ public class VideoCamera extends NoSearchActivity
+@@ -447,6 +448,16 @@ public class VideoCamera extends NoSearchActivity
+             }
+         } else {
+             stopVideoRecordingAndGetThumbnail();
++            // force to restartPreview
++            mCameraDevice.stopPreview();
++            mPreviewing = false;
++            try {
++                mCameraDevice.startPreview();
++                mPreviewing = true;
++            } catch (Throwable ex) {
++                closeCamera();
++                throw new RuntimeException("startPreview failed", ex);
++            }
+             initializeRecorder();
+         }
+     }
+@@ -1225,7 +1236,8 @@ public class VideoCamera extends NoSearchActivity
                  } catch (RuntimeException e) {
                      Log.e(TAG, "stop fail: " + e.getMessage());
                  }
