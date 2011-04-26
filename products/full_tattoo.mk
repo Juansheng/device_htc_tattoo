@@ -24,7 +24,7 @@ $(call inherit-product, device/htc/tattoo/products/tattoo_custom.mk)
 PRODUCT_NAME := full_tattoo
 PRODUCT_DEVICE := tattoo
 PRODUCT_BRAND := Google
-PRODUCT_MODEL := Tattoo
+PRODUCT_MODEL := Click
 PRODUCT_MANUFACTURER := HTC
 
 PLATFORM_VERSION := 2.2.2
@@ -38,7 +38,6 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.secure=0 \
     keyguard.no_require_sim=true \
     ro.kernel.android.checkjni=0 \
-    ro.media.dec.jpeg.memcap=20000000 \
     ro.config.ringtone=BentleyDubs.ogg
 
 # Pick up some sounds
