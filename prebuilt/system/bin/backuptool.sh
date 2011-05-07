@@ -6,7 +6,7 @@
 C=/tmp/backup
 S=/system
 
-# list of tiny gapps-mdpi-20110301
+# list of tiny gapps-mdpi-20110501
 get_files() {
 cat <<EOF
 app/CarHomeGoogle.apk
@@ -25,14 +25,19 @@ app/googlevoice.apk
 app/HtcCopyright.apk
 app/HtcEmailPolicy.apk
 app/HtcSettings.apk
+app/kickback.apk
 app/LatinImeTutorial.apk
 app/Maps.apk
 app/MarketUpdater.apk
 app/MediaUploader.apk
 app/NetworkLocation.apk
 app/OneTimeInitializer.apk
+app/PassionQuickOffice.apk
 app/SetupWizard.apk
+app/soundback.apk
+app/Street.apk
 app/Talk.apk
+app/talkback.apk
 app/Twitter.apk
 app/Vending.apk
 app/VoiceSearch.apk

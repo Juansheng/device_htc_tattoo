@@ -1,10 +1,5 @@
 #!/system/bin/sh
 
-# - no need to set higher
-echo '1' > /sys/devices/virtual/block/mtdblock4/queue/iosched/fifo_batch
-echo '1' > /sys/devices/virtual/block/mtdblock5/queue/iosched/fifo_batch
-echo '1' > /sys/block/mmcblk0/queue/iosched/fifo_batch
-
 # - fix fb0 permissions for copybit while camera running
 chmod 666 /dev/graphics/fb0
 
