@@ -56,6 +56,11 @@ case "$1" in
     backup)
         mount $S
         rm -rf $C
+
+        # skip to backup incompatible version of gapps
+        [ x`sed -ne "/^ro.build.id=froyo$/p" /system/build.prop` == x'' ] && \
+        exit 0
+
         mkdir -p $C
         get_files | while read file
         do
