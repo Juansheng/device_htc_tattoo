@@ -55,18 +55,22 @@ EOF
 case "$1" in
     backup)
         mount $S
-        rm -rf $C
 
         # skip to backup incompatible version of gapps
-        [ x`sed -ne "/^ro.build.id=froyo$/p" /system/build.prop` == x'' ] && \
-        exit 0
+        if [ x`sed -ne "/^ro.build.id=froyo$/p" /system/build.prop` == x'' ]
+        then
+            echo "imcompatible version of gapps!"
+            umount $S
+            exit 0
+        fi
 
+        rm -rf $C
         mkdir -p $C
         get_files | while read file
         do
-            echo "backup: $file"
             if [ -e $S/$file ]
             then
+                echo "backup: $file"
                 fname=`echo $file | busybox sed 's!/!_!g'`
                 cp -p $S/$file $C/$fname
             fi
@@ -76,10 +80,10 @@ case "$1" in
     restore)
         get_files | while read file
         do
-            echo "restore: $file"
             fname=`echo $file | busybox sed 's!/!_!g'`
             if [ -e $C/$fname ]
             then
+                echo "restore: $file"
                 cp -p $C/$fname $S/$file
             fi
         done
