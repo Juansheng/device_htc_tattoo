@@ -698,6 +698,119 @@ index 79ee889..7760f92 100755
  include $(BUILD_STATIC_LIBRARY)
  
 
+project external/wpa_supplicant/
+diff --git a/ctrl_iface.c b/ctrl_iface.c
+index b9ed06b..22a4877 100644
+--- a/ctrl_iface.c
++++ b/ctrl_iface.c
+@@ -28,6 +28,13 @@
+ #include "wpa_ctrl.h"
+ #include "eap.h"
+ 
++#define ANDROID_IBSS_HACK
++
++#ifdef ANDROID_IBSS_HACK
++/// NOTE: don't confuse WifiService.parseScanResult
++#define ANDROID_IBSS_PREFIX "(*)"
++#define ANDROID_IBSS_PREFIX_LEN 3
++#endif
+ 
+ static int wpa_supplicant_global_iface_interfaces(struct wpa_global *global,
+ 						  char *buf, int len);
+@@ -230,6 +237,13 @@ static int wpa_supplicant_ctrl_iface_status(struct wpa_supplicant *wpa_s,
+ 					ssid_len = _res;
+ 				_ssid = ssid_buf;
+ 			}
++#ifdef ANDROID_IBSS_HACK
++            if (ssid->mode == IEEE80211_MODE_IBSS)
++                ret = os_snprintf(pos, end - pos, "ssid=%s%s\nid=%d\n",
++                        ANDROID_IBSS_PREFIX, wpa_ssid_txt(_ssid, ssid_len),
++                        ssid->id);
++            else
++#endif
+ 			ret = os_snprintf(pos, end - pos, "ssid=%s\nid=%d\n",
+ 					  wpa_ssid_txt(_ssid, ssid_len),
+ 					  ssid->id);
+@@ -574,12 +588,14 @@ static int wpa_supplicant_ctrl_iface_scan_results(
+ 				return retpos - buf;
+ 			pos += ret;
+ 		}
++#ifndef ANDROID_IBSS_HACK
+ 		if (res->caps & IEEE80211_CAP_IBSS) {
+ 			ret = os_snprintf(pos, end - pos, "[IBSS]");
+ 			if (ret < 0 || ret >= end - pos)
+ 				return retpos - buf;
+ 			pos += ret;
+ 		}
++#endif
+ 		if (!res->wpa_ie_len && !res->rsn_ie_len) {
+ 			ret = os_snprintf(pos, end - pos, "\t");
+ 			if (ret < 0 || ret >= end - pos)
+@@ -587,6 +603,12 @@ static int wpa_supplicant_ctrl_iface_scan_results(
+ 			pos += ret;
+ 		}
+ 
++#ifdef ANDROID_IBSS_HACK
++        if (res->caps & IEEE80211_CAP_IBSS)
++            ret = os_snprintf(pos, end - pos, "\t%s%s",
++                    ANDROID_IBSS_PREFIX, wpa_ssid_txt(res->ssid, res->ssid_len));
++        else
++#endif
+ 		ret = os_snprintf(pos, end - pos, "\t%s",
+ 				  wpa_ssid_txt(res->ssid, res->ssid_len));
+ 		if (ret < 0 || ret >= end - pos)
+@@ -792,6 +814,21 @@ static int wpa_supplicant_ctrl_iface_set_network(
+ 		return -1;
+ 	}
+ 
++#ifdef ANDROID_IBSS_HACK
++    if (os_strcmp(name, "ssid") == 0) {
++        // check prefix
++        if ((value[0] == '"') && (os_strncmp(value+1, ANDROID_IBSS_PREFIX,
++                ANDROID_IBSS_PREFIX_LEN) == 0)) {
++            if (wpa_config_set(ssid, "mode", "1", 0) < 0) {
++                wpa_printf(MSG_DEBUG, "CTRL_IFACE: failed to set IBSS on '%s'",
++                value);
++                return -1;
++            }
++            value += ANDROID_IBSS_PREFIX_LEN;
++            value[0] = '"';
++        }
++    }
++#endif
+ 	if (wpa_config_set(ssid, name, value, 0) < 0) {
+ 		wpa_printf(MSG_DEBUG, "CTRL_IFACE: Failed to set network "
+ 			   "variable '%s'", name);
+@@ -850,6 +887,11 @@ static int wpa_supplicant_ctrl_iface_get_network(
+ 		return -1;
+ 	}
+ 
++#ifdef ANDROID_IBSS_HACK
++    if ((os_strcmp(name, "ssid") == 0) && (ssid->mode == IEEE80211_MODE_IBSS))
++        os_snprintf(buf, buflen, "\"%s%s", ANDROID_IBSS_PREFIX, value+1);
++    else
++#endif
+ 	os_snprintf(buf, buflen, "%s", value);
+ 	buf[buflen - 1] = '\0';
+ 
+diff --git a/events.c b/events.c
+index bb5be64..dbe0a43 100644
+--- a/events.c
++++ b/events.c
+@@ -478,9 +478,10 @@ wpa_supplicant_select_bss(struct wpa_supplicant *wpa_s, struct wpa_ssid *group,
+ 				continue;
+ 			}
+ 
+-			if (bss->caps & IEEE80211_CAP_IBSS) {
++			if ((bss->caps & IEEE80211_CAP_IBSS) &&
++				ssid->mode != IEEE80211_MODE_IBSS) {
+ 				wpa_printf(MSG_DEBUG, "   skip - "
+-					   "IBSS (adhoc) network");
++						"IBSS (adhoc) network mode mismatch");
+ 				continue;
+ 			}
+ 
+
 project frameworks/base/
 diff --git a/api/current.xml b/api/current.xml
 index 9d259f3..5c7a657 100644
@@ -827,6 +940,38 @@ index a96253b..e35edc3 100644
              sIsStarted = true;
          }
  
+diff --git a/core/java/com/android/internal/widget/SlidingTab.java b/core/java/com/android/internal/widget/SlidingTab.java
+index 9152729..e14beda 100644
+--- a/core/java/com/android/internal/widget/SlidingTab.java
++++ b/core/java/com/android/internal/widget/SlidingTab.java
+@@ -17,12 +17,15 @@
+ package com.android.internal.widget;
+ 
+ import android.content.Context;
++import android.content.ContentResolver;
+ import android.content.res.Configuration;
+ import android.content.res.Resources;
+ import android.content.res.TypedArray;
+ import android.graphics.Canvas;
+ import android.graphics.Rect;
+ import android.graphics.drawable.Drawable;
++import android.provider.Settings;
++import android.provider.Settings.System;
+ import android.os.Vibrator;
+ import android.util.AttributeSet;
+ import android.util.Log;
+@@ -805,6 +808,11 @@ public class SlidingTab extends ViewGroup {
+      * Triggers haptic feedback.
+      */
+     private synchronized void vibrate(long duration) {
++        ContentResolver cv = mContext.getContentResolver();
++        Settings.System ss = new Settings.System();
++        if (ss.getInt(cv, System.HAPTIC_FEEDBACK_ENABLED, 0) != 1)
++            return;
++
+         if (mVibrator == null) {
+             mVibrator = (android.os.Vibrator)
+                     getContext().getSystemService(Context.VIBRATOR_SERVICE);
 diff --git a/core/jni/Android.mk b/core/jni/Android.mk
 index df1ab9e..ba8983d 100644
 --- a/core/jni/Android.mk
@@ -1590,6 +1735,62 @@ index 7155c61..f5ca396 100644
      }
  
      mCurrentSampleIndex = sampleIndex;
+diff --git a/services/java/com/android/server/LightsService.java b/services/java/com/android/server/LightsService.java
+index 9b57735..d09b38b 100644
+--- a/services/java/com/android/server/LightsService.java
++++ b/services/java/com/android/server/LightsService.java
+@@ -140,6 +140,10 @@ public class LightsService {
+         private static final String FLASHLIGHT_FILE = "/sys/class/leds/spotlight/brightness";
+ 
+         public boolean getFlashlightEnabled() {
++            // just return for devices without flashlight
++            return true;
++
++            /*
+             try {
+                 FileInputStream fis = new FileInputStream(FLASHLIGHT_FILE);
+                 int result = fis.read();
+@@ -149,9 +153,14 @@ public class LightsService {
+                 Slog.e(TAG, "getFlashlightEnabled failed", e);
+                 return false;
+             }
++            */
+         }
+ 
+         public void setFlashlightEnabled(boolean on) {
++            // just return for devices without flashlight
++            return;
++
++            /*
+             if (mContext.checkCallingOrSelfPermission(android.Manifest.permission.FLASHLIGHT)
+                     != PackageManager.PERMISSION_GRANTED &&
+                     mContext.checkCallingOrSelfPermission(android.Manifest.permission.HARDWARE_TEST)
+@@ -168,6 +177,7 @@ public class LightsService {
+             } catch (Exception e) {
+                 Slog.e(TAG, "setFlashlightEnabled failed", e);
+             }
++            */
+         }
+     };
+ 
+diff --git a/services/java/com/android/server/NativeDaemonConnector.java b/services/java/com/android/server/NativeDaemonConnector.java
+index c452590..e269df5 100644
+--- a/services/java/com/android/server/NativeDaemonConnector.java
++++ b/services/java/com/android/server/NativeDaemonConnector.java
+@@ -97,11 +97,12 @@ final class NativeDaemonConnector implements Runnable {
+                     LocalSocketAddress.Namespace.RESERVED);
+ 
+             socket.connect(address);
+-            mCallbacks.onDaemonConnected();
+ 
+             InputStream inputStream = socket.getInputStream();
+             mOutputStream = socket.getOutputStream();
+ 
++            mCallbacks.onDaemonConnected();
++
+             byte[] buffer = new byte[BUFFER_SIZE];
+             int start = 0;
+ 
 diff --git a/services/java/com/android/server/status/StatusBarPolicy.java b/services/java/com/android/server/status/StatusBarPolicy.java
 index 94d1cb4..9273271 100644
 --- a/services/java/com/android/server/status/StatusBarPolicy.java
