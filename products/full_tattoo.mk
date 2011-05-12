@@ -37,7 +37,6 @@ PRODUCT_PACKAGES += Stk
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.secure=0 \
     keyguard.no_require_sim=true \
-    ro.kernel.android.checkjni=0 \
     ro.config.ringtone=BentleyDubs.ogg
 
 # Pick up some sounds
