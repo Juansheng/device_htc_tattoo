@@ -777,10 +777,7 @@ static void *cam_frame_click(void *data)
         timeout.tv_usec = 0;
 
         ret = select(framefd+1, &readfds, NULL, NULL, &timeout);
-        if (ret == -1) {
-            LOGE("calling select() failed!");
-            break;
-        } else if (FD_ISSET(framefd, &readfds)) {
+        if (FD_ISSET(framefd, &readfds)) {
             pthread_mutex_lock(&mutex_camframe);
             // ready to get frame
             ret = ioctl(framefd, MSM_CAM_IOCTL_GETFRAME, frame);
@@ -793,6 +790,9 @@ static void *cam_frame_click(void *data)
             } else
                 LOGE("MSM_CAM_IOCTL_GETFRAME error %s", strerror(errno));
             pthread_mutex_unlock(&mutex_camframe);
+        } else if (ret == -1) {
+            LOGE("calling select() failed!");
+            break;
         } else {
             iLog("frame is not ready!");
             usleep(100000);
@@ -1481,9 +1481,7 @@ void QualcommCameraHardware::receivePreviewFrame(struct msm_frame_t *frame)
     }
 
     // Find the offset within the heap of the current buffer.
-    ssize_t offset =
-        (ssize_t)frame->buffer - (ssize_t)mPreviewHeap->mHeap->base();
-    offset /= mPreviewFrameSize;
+    ssize_t offset = 0;
 
     mInPreviewCallback = true;
     if (mMsgEnabled & CAMERA_MSG_PREVIEW_FRAME)
