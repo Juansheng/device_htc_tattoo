@@ -2335,6 +2335,41 @@ index ff7c465..33d098e 100644
          </activity>
          <activity android:name="com.android.camera.DeleteImage"
                  android:label="@string/delete_images_message"
+diff --git a/src/com/android/camera/ViewImage.java b/src/com/android/camera/ViewImage.java
+index 9288c53..9b1eec1 100644
+--- a/src/com/android/camera/ViewImage.java
++++ b/src/com/android/camera/ViewImage.java
+@@ -326,6 +326,30 @@ public class ViewImage extends NoSearchActivity implements View.OnClickListener
+     private class MyGestureListener extends
+             GestureDetector.SimpleOnGestureListener {
+ 
++        // Swipe gesture
++        private static final int SWIPE_MIN_DISTANCE = 75;
++        private static final int SWIPE_MAX_OFF_PATH = 250;
++        private static final int SWIPE_THRESHOLD_VELOCITY = 200;
++
++        @Override
++        public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
++            try {
++                if (Math.abs(e1.getY() - e2.getY()) > SWIPE_MAX_OFF_PATH)
++                    return false;
++                // right to left swipe
++                if (e1.getX() - e2.getX() > SWIPE_MIN_DISTANCE
++                        && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
++                    moveNextOrPrevious(1);
++                } else if (e2.getX() - e1.getX() > SWIPE_MIN_DISTANCE
++                        && Math.abs(velocityX) > SWIPE_THRESHOLD_VELOCITY) {
++                    moveNextOrPrevious(-1);
++                }
++            } catch (Exception e) {
++                // nothing
++            }
++            return false;
++        }
++
+         @Override
+         public boolean onScroll(MotionEvent e1, MotionEvent e2,
+                 float distanceX, float distanceY) {
 
 project packages/apps/Launcher2/
 diff --git a/AndroidManifest.xml b/AndroidManifest.xml
