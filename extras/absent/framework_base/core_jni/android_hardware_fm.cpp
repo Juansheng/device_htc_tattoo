@@ -34,12 +34,14 @@
 #include "nativehelper/JNIHelp.h"
 #include "utils/Log.h"
 #include "android_runtime/AndroidRuntime.h"
+#include <math.h>
 
 #define FM_JNI_SUCCESS 0L
 #define FM_JNI_FAILURE -1L
 
 
 int setFreq(int freq);
+int getFreq();
 int radioOn();
 int radioOff();
 
@@ -125,6 +127,49 @@ int setFreq(int freq)
     return FM_JNI_SUCCESS;
 }
 
+static int hex2int(char hex)
+{
+    if (hex >= '0' && hex <= '9')
+        return hex - '0';
+    if (hex >= 'a' && hex <= 'f')
+        return hex - 'a' + 10;
+    if (hex >= 'A' && hex <= 'F')
+        return hex - 'A' + 10;
+
+    return -1;
+}
+
+int getFreq()
+{
+    char resid[] = "  01 33 FD 00 ";
+    char buffer[128];
+    int freq = 0;
+    int i, j;
+
+    FILE* pipe = popen("hcitool cmd 0x3f 0x133 0x0a 0x02 0x00", "r");
+    if (!pipe) return FM_JNI_FAILURE;
+
+    while (!feof(pipe)) {
+        // get the last line, depends on output of hcitool
+        if (fgets(buffer, 128, pipe) != NULL)
+            ;
+    }
+    pclose(pipe);
+
+    if (!strstr(buffer, resid))
+        return FM_JNI_FAILURE;
+
+    // offset last 4 digits
+    i = strlen(resid) + 4;
+    j = 0;
+    while (i >= strlen(resid))
+        if (buffer[i] == ' ')
+            i--;
+        else
+            freq += hex2int(buffer[i--]) * pow(16, j++);
+
+    return freq * 50 + 87500;
+}
 
 using namespace android;
 
@@ -160,11 +205,7 @@ static jint android_hardware_fmradio_FmReceiverJNI_setControlNative
 static jint android_hardware_fmradio_FmReceiverJNI_getFreqNative
     (JNIEnv * env, jobject thiz, jint fd)
 {
-    //TODO it actually never read the frequency, but this is not implemented correctly nevertheless
-    int retval = system("hcitool cmd 0x3f 0x133 0x0a 0x02 0x00");
-    LOGD("getFreqNative() %d", retval);
-
-    return retval;
+    return getFreq();
 }
 
 /*native interface */
