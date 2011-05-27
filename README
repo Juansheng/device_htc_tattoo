@@ -8,16 +8,19 @@ Notes:
   This patch mainly contains:
 
   - ability to compile with java 1.6
-  - libdvm.so optimization by Jim Huang
+  - libdvm and libc optimization by Jim Huang
   - adjusted prelink mapping to avoid link_image error
-  - the patch from Cy to implement 'exec' command in init
-  - FM implementation
+  - the patch from CyanogenMod to implement 'exec' command in init
+  - FMRadio app, autoscan support
+  - hacks to support Camera video recorder
+  - optimization for Launcher2 app
+  - other various bugfix and implementation
 
   NOTE: extra sources are stored in ./extras/absent.
 
 * Every hardware is fully working now.
 
-* Modules added into the Kernel: Bfs 363, tattoo-hack, and compcache.
+* Modules added into the Kernel: BFS 363, tattoo-hack, and compcache.
 
-* Packages got from Cy: busybox, bash, Superuser, FileManager, and FM.
+* Packages got from Cy: busybox/bash/libncurses/Superuser/FileManager/FM.
 
