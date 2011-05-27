@@ -1,9 +1,9 @@
-Project : froyo(2.2.2_r1) vender for HTC Tattoo device
+Project :: latest froyo vender for HTC Tattoo device
 
 
-Notes:
+README:
 
-* Froyo-AOSP.patch MUST be applied before compiling the whole android project.
+* Froyo-AOSP.patch MUST be applied with repo_apply.sh before starting compilation.
 
   This patch mainly contains:
 
@@ -11,16 +11,16 @@ Notes:
   - libdvm and libc optimization by Jim Huang
   - adjusted prelink mapping to avoid link_image error
   - the patch from CyanogenMod to implement 'exec' command in init
-  - FMRadio app, autoscan support
+  - improved FMRadio app, autoscan and BT sleep mode support
   - hacks to support Camera video recorder
-  - optimization for Launcher2 app
+  - optimization of Launcher2 app to get better experience
   - other various bugfix and implementation
 
-  NOTE: extra sources are stored in ./extras/absent.
+  NOTE: missing sources from the patch above are stored in ./extras/absent.
 
 * Every hardware is fully working now.
 
-* Modules added into the Kernel: BFS 363, tattoo-hack, and compcache.
+* Parts added into the Kernel: BFS/BFQ/TINY-RCU/tattoo-hack/compcache.
 
 * Packages got from Cy: busybox/bash/libncurses/Superuser/FileManager/FM.
 
