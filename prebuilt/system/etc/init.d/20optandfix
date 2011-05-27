@@ -3,5 +3,13 @@
 # - fix fb0 permissions for copybit while camera running
 chmod 666 /dev/graphics/fb0
 
+# - tweaks to save a bit power
+echo '2000' > /proc/sys/vm/dirty_writeback_centisecs
+echo '800' > /proc/sys/vm/dirty_expire_centisecs
+
+# - remount partitions with noatime
+busybox mount -o remount,noatime /data
+busybox mount -o remount,noatime /cache
+
 exit 0
 
