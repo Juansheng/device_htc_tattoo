@@ -1,4 +1,45 @@
 
+project bionic/
+diff --git a/libc/Android.mk b/libc/Android.mk
+index d2e5e1f..7eae750 100644
+--- a/libc/Android.mk
++++ b/libc/Android.mk
+@@ -186,9 +186,7 @@ libc_common_src_files := \
+ 	string/strcasestr.c \
+ 	string/strcat.c \
+ 	string/strchr.c \
+-	string/strcmp.c \
+ 	string/strcoll.c \
+-	string/strcpy.c \
+ 	string/strcspn.c \
+ 	string/strdup.c \
+ 	string/strerror.c \
+@@ -311,6 +309,8 @@ libc_common_src_files += \
+ 	arch-arm/bionic/setjmp.S \
+ 	arch-arm/bionic/sigsetjmp.S \
+ 	arch-arm/bionic/strlen.c.arm \
++	arch-arm/bionic/strcpy.S \
++	arch-arm/bionic/strcmp.S \
+ 	arch-arm/bionic/syscall.S \
+ 	string/memmove.c.arm \
+ 	unistd/socketcalls.c
+@@ -350,6 +350,7 @@ libc_common_src_files += \
+ 	arch-x86/string/memcpy.S \
+ 	arch-x86/string/strlen.S \
+ 	string/memmove.c \
++	string/strcpy.c \
+ 	bionic/pthread.c \
+ 	bionic/pthread-timers.c \
+ 	bionic/ptrace.c
+@@ -383,6 +384,7 @@ libc_common_src_files += \
+ 	arch-sh/bionic/ffs.S \
+ 	string/memcmp.c \
+ 	string/strlen.c \
++	string/strcpy.c \
+ 	bionic/eabi.c \
+ 	bionic/pthread.c \
+ 	bionic/pthread-timers.c \
+
 project build/
 diff --git a/buildspec.mk.default b/buildspec.mk.default
 index 6303efc..c568a82 100644
@@ -1876,6 +1917,72 @@ index ab79f8d..f284e86 100644
  
  
 
+project frameworks/policies/base/
+diff --git a/phone/com/android/internal/policy/impl/KeyguardUpdateMonitor.java b/phone/com/android/internal/policy/impl/KeyguardUpdateMonitor.java
+index b225e56..d41d156 100644
+--- a/phone/com/android/internal/policy/impl/KeyguardUpdateMonitor.java
++++ b/phone/com/android/internal/policy/impl/KeyguardUpdateMonitor.java
+@@ -338,16 +338,16 @@ public class KeyguardUpdateMonitor {
+ 
+     private boolean isBatteryUpdateInteresting(boolean pluggedIn, int batteryLevel) {
+         // change in plug is always interesting
+-        if (mDevicePluggedIn != pluggedIn) {
++        if (mDevicePluggedIn != pluggedIn) { // pluggedIn &&
+             return true;
+         }
+ 
+         // change in battery level while plugged in
+-        if (pluggedIn && mBatteryLevel != batteryLevel) {
++        if (mBatteryLevel != batteryLevel) {
+             return true;
+         }
+ 
+-        if (!pluggedIn) {
++        if (false) { // !pluggedIn
+             // not plugged in and below threshold
+             if (batteryLevel < LOW_BATTERY_THRESHOLD && batteryLevel != mBatteryLevel) {
+                 return true;
+diff --git a/phone/com/android/internal/policy/impl/LockScreen.java b/phone/com/android/internal/policy/impl/LockScreen.java
+index a5ef1fa..2b26e95 100644
+--- a/phone/com/android/internal/policy/impl/LockScreen.java
++++ b/phone/com/android/internal/policy/impl/LockScreen.java
+@@ -401,24 +401,29 @@ class LockScreen extends LinearLayout implements KeyguardScreen, KeyguardUpdateM
+     }
+ 
+     private void refreshBatteryStringAndIcon() {
+-        if (!mShowingBatteryInfo) {
++        if (false) { // !mShowingBatteryInfo
+             mCharging = null;
+             return;
+         }
+ 
+-        if (mChargingIcon == null) {
++        if (mPluggedIn) { // mChargingIcon == null
+             mChargingIcon =
+                     getContext().getResources().getDrawable(R.drawable.ic_lock_idle_charging);
+-        }
+-
+-        if (mPluggedIn) {
+             if (mBatteryLevel >= 100) {
+                 mCharging = getContext().getString(R.string.lockscreen_charged);
+             } else {
+                 mCharging = getContext().getString(R.string.lockscreen_plugged_in, mBatteryLevel);
+             }
+         } else {
+-            mCharging = getContext().getString(R.string.lockscreen_low_battery);
++            if (mBatteryLevel <= 20) {
++                mChargingIcon =
++                    getContext().getResources().getDrawable(R.drawable.ic_lock_idle_low_battery);
++                mCharging = getContext().getString(R.string.lockscreen_low_battery, mBatteryLevel);
++            } else {
++                mChargingIcon =
++                    getContext().getResources().getDrawable(R.drawable.ic_lock_idle_charging);
++                mCharging = Integer.toString(mBatteryLevel) + "%";
++            }
+         }
+     }
+ 
+
 project hardware/libhardware_legacy/
 diff --git a/include/hardware_legacy/AudioHardwareInterface.h b/include/hardware_legacy/AudioHardwareInterface.h
 index ba65d9a..766590e 100644
@@ -2054,6 +2161,20 @@ index f68f249..2ce0a57 100644
  
       friend class AudioStreamInMSM72xx;
              Mutex       mLock;
+diff --git a/liblights/lights.c b/liblights/lights.c
+index 555833b..9fb1dad 100644
+--- a/liblights/lights.c
++++ b/liblights/lights.c
+@@ -177,7 +177,9 @@ set_light_keyboard(struct light_device_t* dev,
+     int err = 0;
+     int on = is_lit(state);
+     pthread_mutex_lock(&g_lock);
++#if 0 /* no keyboard on HTC Tattoo */
+     err = write_int(KEYBOARD_FILE, on?255:0);
++#endif
+     pthread_mutex_unlock(&g_lock);
+     return err;
+ }
 
 project packages/apps/Camera/
 diff --git a/AndroidManifest.xml b/AndroidManifest.xml
@@ -2541,7 +2662,7 @@ index 17f7573..f092ed7 100644
      }
  
 diff --git a/src/com/android/launcher2/Workspace.java b/src/com/android/launcher2/Workspace.java
-index c337c30..976698c 100644
+index c337c30..9a9e922 100644
 --- a/src/com/android/launcher2/Workspace.java
 +++ b/src/com/android/launcher2/Workspace.java
 @@ -62,7 +62,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
@@ -2568,7 +2689,24 @@ index c337c30..976698c 100644
          private float mTension;
  
          public WorkspaceOvershootInterpolator() {
-@@ -810,6 +810,18 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -732,10 +732,12 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+                         getLocationOnScreen(mTempCell);
+                         // Send a tap to the wallpaper if the last down was on empty space
+                         final int pointerIndex = ev.findPointerIndex(mActivePointerId);
+-                        mWallpaperManager.sendWallpaperCommand(getWindowToken(), 
+-                                "android.wallpaper.tap",
+-                                mTempCell[0] + (int) ev.getX(pointerIndex),
+-                                mTempCell[1] + (int) ev.getY(pointerIndex), 0, null);
++                        if (pointerIndex >= 0) {
++                            mWallpaperManager.sendWallpaperCommand(getWindowToken(), 
++                                    "android.wallpaper.tap",
++                                    mTempCell[0] + (int) ev.getX(pointerIndex),
++                                    mTempCell[1] + (int) ev.getY(pointerIndex), 0, null);
++                        }
+                     }
+                 }
+                 
+@@ -810,6 +812,18 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
          }
      }
  
@@ -2587,7 +2725,7 @@ index c337c30..976698c 100644
      void enableChildrenCache(int fromScreen, int toScreen) {
          if (fromScreen > toScreen) {
              final int temp = fromScreen;
-@@ -907,7 +919,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -907,7 +921,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
              if (mTouchState == TOUCH_STATE_SCROLLING) {
                  final VelocityTracker velocityTracker = mVelocityTracker;
                  velocityTracker.computeCurrentVelocity(1000, mMaximumVelocity);
@@ -2596,7 +2734,7 @@ index c337c30..976698c 100644
                  
                  final int screenWidth = getWidth();
                  final int whichScreen = (mScrollX + (screenWidth / 2)) / screenWidth;
-@@ -918,13 +930,13 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -918,13 +932,13 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
                      // Don't fling across more than one screen at a time.
                      final int bound = scrolledPos < whichScreen ?
                              mCurrentScreen - 1 : mCurrentScreen;
@@ -2612,7 +2750,7 @@ index c337c30..976698c 100644
                  } else {
                      snapToScreen(whichScreen, 0, true);
                  }
-@@ -975,7 +987,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -975,7 +989,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
          final int screenDelta = Math.max(1, Math.abs(whichScreen - mCurrentScreen));
          final int newX = whichScreen * getWidth();
          final int delta = newX - mScrollX;
@@ -2621,7 +2759,7 @@ index c337c30..976698c 100644
  
          if (!mScroller.isFinished()) {
              mScroller.abortAnimation();
-@@ -992,7 +1004,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
+@@ -992,7 +1006,7 @@ public class Workspace extends ViewGroup implements DropTarget, DragSource, Drag
              duration += (duration / (velocity / BASELINE_FLING_VELOCITY))
                      * FLING_VELOCITY_INFLUENCE;
          } else {
@@ -2674,13 +2812,14 @@ index 1c15123..e028859 100755
 
 project packages/apps/SoundRecorder/
 diff --git a/AndroidManifest.xml b/AndroidManifest.xml
-index a70ee0e..8dd32d1 100644
+index a70ee0e..ade3eec 100644
 --- a/AndroidManifest.xml
 +++ b/AndroidManifest.xml
-@@ -29,6 +29,7 @@
+@@ -29,6 +29,8 @@
                  android:configChanges="orientation|keyboardHidden">
              <intent-filter>
                  <action android:name="android.intent.action.MAIN" />
++                <category android:name="android.intent.category.DEFAULT" />
 +                <category android:name="android.intent.category.LAUNCHER"/>
              </intent-filter>
              <intent-filter>
