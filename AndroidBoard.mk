@@ -53,10 +53,3 @@ include $(CLEAR_VARS)
 LOCAL_SRC_FILES := bahamas-keypad.kcm
 include $(BUILD_KEY_CHAR_MAP)
 
-# This will install the file in /system/etc
-#
-include $(CLEAR_VARS)
-LOCAL_MODULE_CLASS := ETC
-LOCAL_MODULE := agps_rm
-LOCAL_SRC_FILES := prebuilt/system/etc/$(LOCAL_MODULE)
-include $(BUILD_PREBUILT)

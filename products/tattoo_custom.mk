@@ -46,8 +46,6 @@ PRODUCT_PACKAGES += \
     Sync \
     SyncProvider \
     Updater \
-    Superuser \
-    FileManager \
     FM
 # End of generic.mk
 
@@ -99,7 +97,6 @@ PRODUCT_COPY_FILES += \
     device/htc/tattoo/prebuilt/system/etc/init.d/01dalvikcache:system/etc/init.d/01dalvikcache \
     device/htc/tattoo/prebuilt/system/etc/init.d/08compcache:system/etc/init.d/08compcache \
     device/htc/tattoo/prebuilt/system/etc/init.d/20optandfix:system/etc/init.d/20optandfix \
-    device/htc/tattoo/prebuilt/system/etc/init.d/80userinit:system/etc/init.d/80userinit \
     device/htc/tattoo/prebuilt/system/etc/media_profiles.xml:/system/etc/media_profiles.xml \
     device/htc/tattoo/prebuilt/system/etc/passwd:system/etc/passwd \
     device/htc/tattoo/prebuilt/system/etc/resolv.conf:system/etc/resolv.conf \
@@ -123,6 +120,8 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/META-INF/com/google/android/update-binary:META-INF/com/google/android/update-binary \
 	device/htc/tattoo/prebuilt/META-INF/com/google/android/updater-script:META-INF/com/google/android/updater-script \
 	device/htc/tattoo/prebuilt/META-INF/com/android/metadata:META-INF/com/android/metadata \
+	device/htc/tattoo/prebuilt/system/app/FileManager.apk:system/app/FileManager.apk \
+	device/htc/tattoo/prebuilt/system/app/Superuser.apk:system/app/Superuser.apk \
 	device/htc/tattoo/prebuilt/system/bin/akm8973:system/bin/akm8973 \
 	device/htc/tattoo/prebuilt/system/bin/backuptool.sh:system/bin/backuptool.sh \
 	device/htc/tattoo/prebuilt/system/bin/sysinit:system/bin/sysinit \

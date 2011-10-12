@@ -36,8 +36,7 @@ PRODUCT_PACKAGES += Stk
 
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.secure=0 \
-    keyguard.no_require_sim=true \
-    ro.config.ringtone=BentleyDubs.ogg
+    keyguard.no_require_sim=true
 
 # Pick up some sounds
 include frameworks/base/data/sounds/OriginalAudio.mk
