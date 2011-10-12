@@ -84,7 +84,7 @@
                    bitRate="320000"
                    width="384"
                    height="288"
-                   frameRate="24" />
+                   frameRate="20" />
 
             <Audio codec="amrnb"
                    bitRate="12200"

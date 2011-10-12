@@ -213,7 +213,7 @@ on boot
     write /proc/sys/vm/dirty_background_ratio  5 
 
     # write Calibration
-    write /sys/class/input/input1/calibration_points 832,869,185,868,507,504,826,142,186,148
+    write /sys/class/input/input1/calibration_points 837,864,166,859,507,503,844,142,167,142
 
     # Permissions for System Server and daemons.
     chown radio system /sys/android_power/state

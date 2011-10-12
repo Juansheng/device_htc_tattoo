@@ -10,10 +10,10 @@ include $(CLEAR_VARS)
 
 LOCAL_SRC_FILES := QualcommCameraHardware.cpp exifwriter.c jdatadst.cpp jpegConvert.cpp
 
-LOCAL_CFLAGS := -DDLOPEN_LIBMMCAMERA=$(DLOPEN_LIBMMCAMERA)
+LOCAL_CFLAGS := -DDLOPEN_LIBMMCAMERA=$(DLOPEN_LIBMMCAMERA) -O2
 
 LOCAL_C_INCLUDES += \
-	external/jhead \
+    external/jhead \
     external/jpeg
 
 LOCAL_SHARED_LIBRARIES := libbinder libutils libcamera_client liblog libjpeg
