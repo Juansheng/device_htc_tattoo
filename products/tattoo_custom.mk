@@ -126,6 +126,7 @@ PRODUCT_COPY_FILES += \
 	device/htc/tattoo/prebuilt/system/bin/backuptool.sh:system/bin/backuptool.sh \
 	device/htc/tattoo/prebuilt/system/bin/sysinit:system/bin/sysinit \
 	device/htc/tattoo/prebuilt/system/xbin/rzscontrol:system/xbin/rzscontrol \
+	device/htc/tattoo/prebuilt/system/xbin/su:system/xbin/su \
 	device/htc/tattoo/prebuilt/system/lib/modules/wlan.ko:system/lib/modules/wlan.ko
 
 # Media
