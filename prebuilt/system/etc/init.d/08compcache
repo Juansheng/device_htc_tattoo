@@ -1,9 +1,8 @@
 #!/system/bin/sh
 
 # - load compcache module
-echo '20971520' > /sys/block/zram0/disksize
-mkswap /dev/block/zram0
-swapon /dev/block/zram0
+rzscontrol /dev/block/ramzswap0 disksize_kb=20480 --init
+swapon /dev/block/ramzswap0
 
 exit 0
 
