@@ -133,7 +133,8 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
 	frameworks/base/data/sounds/effects/Lock.ogg:system/media/audio/ui/Lock.ogg \
 	frameworks/base/data/sounds/effects/Unlock.ogg:system/media/audio/ui/Unlock.ogg \
-	system/core/rootdir/etc/vold.fstab:system/etc/vold.fstab
+	system/core/rootdir/etc/vold.fstab:system/etc/vold.fstab \
+	device/htc/tattoo/prebuilt/system/media/bootanimation.zip:system/media/bootanimation.zip
 
 # Prebuilt libraries
 PRODUCT_COPY_FILES += \
